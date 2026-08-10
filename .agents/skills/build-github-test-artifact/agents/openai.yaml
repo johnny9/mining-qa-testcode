@@ -1,0 +1,4 @@
+interface:
+  display_name: "Build GitHub Test Artifact"
+  short_description: "Build verified GitHub test artifacts"
+  default_prompt: "Use $build-github-test-artifact to build a verified firmware artifact from a GitHub revision for local hardware testing."

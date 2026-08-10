@@ -1,0 +1,4 @@
+interface:
+  display_name: "Configure Mining Test Device"
+  short_description: "Create safe local mining test profiles"
+  default_prompt: "Use $configure-mining-test-device to create and validate a local test profile for my mining device."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Run Mining Device Test"
+  short_description: "Run and verify mining hardware tests"
+  default_prompt: "Use $run-mining-device-test to preflight and run an authorized test against my configured local device."
