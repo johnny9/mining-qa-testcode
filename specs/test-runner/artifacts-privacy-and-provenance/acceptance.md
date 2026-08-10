@@ -18,6 +18,9 @@
 - [x] **TR-EVIDENCE-AC-05:** HTTP traces exclude bodies and authorization data.
 - [x] **TR-EVIDENCE-AC-06:** Artifact paths cannot traverse outside the run
   root and existing runs are not overwritten.
+- [x] **TR-EVIDENCE-AC-10:** Orchestrated runs emit a bounded manifest containing
+  only safe finalized artifact paths with exact sizes and SHA-256 values for
+  independent private archival verification.
 
 ## Quality attributes
 
@@ -31,7 +34,7 @@
 - `tests.unit.test_redaction`, `tests.unit.test_provenance`,
   `tests.unit.test_runner`, `tests.unit.test_config`, and API-interface tests
   cover the core transformations, pre-hardware source guard, and artifact
-  handling; reconciled 2026-08-10.
+  handling and orchestration manifest hashing; reconciled 2026-08-10.
 - A fresh full publication audit was not performed for this documentation
   iteration.
 

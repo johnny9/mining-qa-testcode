@@ -29,6 +29,7 @@ presents results.
 - Normalized state, telemetry, chart markers, artifacts, privacy, and exact
   source provenance.
 - Local, GitHub Check, and Mining QA Status child-result publication.
+- Bounded hash manifests for redundant private archival by the lab.
 - Independent verification of orchestrator-supplied testcode repository/SHA.
 
 ## Project boundary
@@ -64,15 +65,16 @@ flowchart LR
     O["Direct operator"] --> T
     T -->|"HTTP / WebSocket / serial / Stratum"| D["Mining device"]
     T -->|"detailed child result + artifacts"| Q["mining-qa-status"]
-    T -->|"bounded result pointer"| L
+    T -->|"bounded result pointer and artifact manifest"| L
 ```
 
 ## Cross-project contract
 
 The public boundary is [contracts/orchestration-v1.md](../contracts/orchestration-v1.md).
 It defines runner CLI arguments, exit states, bounded environment metadata,
-testcode identity verification, and the result-pointer object. The runner does
-not import lab modules and the lab does not import runner modules.
+testcode identity verification, the result-pointer object, and its optional
+bounded artifact-manifest descriptor. The runner does not import lab modules
+and the lab does not import runner modules.
 
 Additive v1 fields are compatible. Meaning/type removal or changes require a
 new version with coordinated support in both repositories.
@@ -101,3 +103,5 @@ new version with coordinated support in both repositories.
   `mining-qa-lab` an external restricted owner, and established contract v1.
 - 2026-08-10: Established the original runner/lab ownership boundary and child
   result protocol.
+- 2026-08-10: Added a bounded artifact manifest for private lab redundancy
+  without changing required Mining QA child publication.

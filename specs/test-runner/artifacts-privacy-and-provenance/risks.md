@@ -27,6 +27,8 @@
 - Dirty or mismatched source is presented as the requested revision.
 - Orchestrator metadata is trusted without comparing it to the runner checkout.
 - An unsafe filename escapes or collides with another run.
+- A very large artifact set exhausts runner or lab resources, or changes after
+  hashing and produces a misleading archive.
 
 ## Security, privacy, and safety
 
@@ -36,7 +38,8 @@ values, never real credentials, when proving absence.
 ## Performance and resource risks
 
 Verbose traces, images, and telemetry can exhaust disk or make upload failure
-more likely; use explicit caps and retention outside the runner.
+more likely; manifest production fails at explicit count/per-file/total caps and
+retention remains an operator responsibility outside the runner.
 
 ## Rollout and rollback
 

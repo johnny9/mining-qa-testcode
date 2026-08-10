@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import inspect
 import json
 import logging
+import mimetypes
 import os
 import sys
 import tempfile
@@ -25,6 +27,10 @@ from .testcase import MinerTestCase, TestContext
 
 _MAX_ORCHESTRATION_METADATA_BYTES = 64 * 1024
 _MAX_RESULT_POINTER_BYTES = 64 * 1024
+_MAX_ARTIFACT_MANIFEST_BYTES = 256 * 1024
+_MAX_ARCHIVE_ARTIFACTS = 512
+_MAX_ARCHIVE_ARTIFACT_BYTES = 50 * 1024 * 1024
+_MAX_ARCHIVE_TOTAL_BYTES = 512 * 1024 * 1024
 ORCHESTRATION_CONTRACT_VERSION = 1
 
 
@@ -84,10 +90,93 @@ class RunOutcome:
     summary: RunSummary
 
 
-def _result_pointer_payload(
-    summary: RunSummary, *, successful: bool
-) -> dict[str, object]:
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _write_artifact_manifest(summary: RunSummary) -> dict[str, object]:
+    root = summary.artifact_root.resolve()
+    entries = sorted(root.rglob("*"))
+    if any(path.is_symlink() for path in entries):
+        raise ConfigError("artifact archive must not contain symlinks")
+    paths = [
+        path
+        for path in entries
+        if path.is_file() and path.name != "orchestration-artifacts.json"
+    ]
+    if len(paths) > _MAX_ARCHIVE_ARTIFACTS:
+        raise ConfigError(
+            f"artifact archive contains more than {_MAX_ARCHIVE_ARTIFACTS} files"
+        )
+    artifacts = []
+    total = 0
+    for path in paths:
+        resolved = path.resolve()
+        if not resolved.is_relative_to(root):
+            raise ConfigError("artifact archive path escapes the run root")
+        size = resolved.stat().st_size
+        if size > _MAX_ARCHIVE_ARTIFACT_BYTES:
+            raise ConfigError(
+                f"artifact {resolved.name} exceeds the 50 MiB archive limit"
+            )
+        total += size
+        if total > _MAX_ARCHIVE_TOTAL_BYTES:
+            raise ConfigError("artifact archive exceeds the 512 MiB run limit")
+        artifacts.append(
+            {
+                "path": resolved.relative_to(root).as_posix(),
+                "size_bytes": size,
+                "sha256": _sha256(resolved),
+                "media_type": mimetypes.guess_type(resolved.name)[0]
+                or "application/octet-stream",
+            }
+        )
+    manifest = {
+        "version": 1,
+        "run_id": summary.run_id,
+        "artifacts": artifacts,
+    }
+    path = root / "orchestration-artifacts.json"
+    serialized = json.dumps(manifest, indent=2, sort_keys=True) + "\n"
+    encoded = serialized.encode("utf-8")
+    if len(encoded) > _MAX_ARTIFACT_MANIFEST_BYTES:
+        raise ConfigError("artifact manifest exceeds 256 KiB")
+    temporary: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="wb",
+            prefix=f".{path.name}.",
+            suffix=".tmp",
+            dir=path.parent,
+            delete=False,
+        ) as handle:
+            temporary = Path(handle.name)
+            handle.write(encoded)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, path)
+        temporary = None
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
     return {
+        "path": path.name,
+        "size_bytes": len(encoded),
+        "sha256": hashlib.sha256(encoded).hexdigest(),
+    }
+
+
+def _result_pointer_payload(
+    summary: RunSummary,
+    *,
+    successful: bool,
+    artifact_manifest: Mapping[str, object] | None = None,
+) -> dict[str, object]:
+    payload: dict[str, object] = {
         "contract_version": ORCHESTRATION_CONTRACT_VERSION,
         "successful": successful,
         "status": summary.status,
@@ -104,6 +193,9 @@ def _result_pointer_payload(
             for item in summary.publishers
         ],
     }
+    if artifact_manifest is not None:
+        payload["artifact_manifest"] = dict(artifact_manifest)
+    return payload
 
 
 def _write_result_pointer(path: Path, payload: Mapping[str, object]) -> None:
@@ -516,9 +608,14 @@ def execute(argv: list[str] | None = None) -> RunOutcome:
     pointer = os.environ.get("MINER_TEST_RESULT_POINTER", "").strip()
     if pointer:
         pointer_path = Path(pointer).expanduser().resolve()
+        artifact_manifest = _write_artifact_manifest(summary)
         _write_result_pointer(
             pointer_path,
-            _result_pointer_payload(summary, successful=successful),
+            _result_pointer_payload(
+                summary,
+                successful=successful,
+                artifact_manifest=artifact_manifest,
+            ),
         )
     return RunOutcome(successful=successful, summary=summary)
 

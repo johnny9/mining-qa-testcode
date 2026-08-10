@@ -14,6 +14,7 @@ from miner_testcode.results import PublisherRecord, RunSummary, TestCodeRecord
 from miner_testcode.runner import (
     MiningTestResult,
     _result_pointer_payload,
+    _write_artifact_manifest,
     _write_result_pointer,
 )
 from miner_testcode.telemetry import STANDARD_MINING_METRICS, TelemetryCapture
@@ -57,6 +58,76 @@ class ResultMarkerTest(unittest.TestCase):
 
             with self.assertRaisesRegex(ConfigError, "exceeds 64 KiB"):
                 _write_result_pointer(pointer, {"detail": "x" * (65 * 1024)})
+
+    def test_writes_bounded_hash_verified_artifact_manifest(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "artifacts"
+            root.mkdir()
+            case = root / "001-case"
+            case.mkdir()
+            (root / "runner.log").write_text("runner output\n", encoding="utf-8")
+            (case / "test.log").write_text("test output\n", encoding="utf-8")
+            summary = RunSummary(
+                run_id="run-1",
+                artifact_root=root,
+                started_at=1.0,
+                finished_at=2.0,
+                devices=(),
+                tests=(),
+                tests_run=0,
+                failures=0,
+                errors=0,
+                skipped=0,
+                expected_failures=0,
+                unexpected_successes=0,
+                successful=True,
+            )
+
+            descriptor = _write_artifact_manifest(summary)
+            manifest = json.loads(
+                (root / "orchestration-artifacts.json").read_text(encoding="utf-8")
+            )
+            payload = _result_pointer_payload(
+                summary,
+                successful=True,
+                artifact_manifest=descriptor,
+            )
+
+        self.assertEqual(manifest["version"], 1)
+        self.assertEqual(
+            {item["path"] for item in manifest["artifacts"]},
+            {"001-case/test.log", "runner.log"},
+        )
+        self.assertTrue(
+            all(len(item["sha256"]) == 64 for item in manifest["artifacts"])
+        )
+        self.assertEqual(payload["artifact_manifest"], descriptor)
+
+    def test_artifact_manifest_rejects_symlinks(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "artifacts"
+            root.mkdir()
+            target = root / "target.log"
+            target.write_text("output\n", encoding="utf-8")
+            (root / "linked.log").symlink_to(target)
+            summary = RunSummary(
+                run_id="run-1",
+                artifact_root=root,
+                started_at=1.0,
+                finished_at=2.0,
+                devices=(),
+                tests=(),
+                tests_run=0,
+                failures=0,
+                errors=0,
+                skipped=0,
+                expected_failures=0,
+                unexpected_successes=0,
+                successful=True,
+            )
+
+            with self.assertRaisesRegex(ConfigError, "symlinks"):
+                _write_artifact_manifest(summary)
 
     def test_success_marker_names_the_test_method(self) -> None:
         class ExampleCase(unittest.TestCase):

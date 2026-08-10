@@ -43,6 +43,9 @@
 
 - A run contains metadata, per-test evidence, logs, results, and publisher
   records. Paths are relative to the run root and names are sanitized.
+- After publishers finish, an orchestration manifest lists each finalized file
+  by safe relative path, byte size, SHA-256, and media type. Its own descriptor
+  enters the result pointer.
 
 ## Contract constraints
 
@@ -57,6 +60,8 @@
 - When orchestration supplies expected testcode repository/SHA, independently
   resolved source must match both before artifact allocation or device creation.
 - Artifact paths cannot escape the configured run root.
+- The orchestration manifest excludes itself, rejects symlinks/escapes, and is
+  capped at 256 KiB, 512 entries, 50 MiB per file, and 512 MiB total.
 
 ### Forbidden behavior
 
@@ -76,7 +81,8 @@ mapping is run-scoped so the same sensitive value has one consistent label.
 1. Collect source/runtime metadata and verify orchestrated source constraints.
 2. Register sensitive values and allocate run/per-test paths.
 3. Sanitize evidence at capture boundaries.
-4. Finalize results/manifest and expose only sanitized publication inputs.
+4. Finalize publisher records and write the bounded artifact manifest.
+5. Expose sanitized publication inputs and the manifest descriptor.
 
 ## Failure and recovery
 

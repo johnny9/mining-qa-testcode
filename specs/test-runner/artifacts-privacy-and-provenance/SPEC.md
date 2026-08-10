@@ -13,6 +13,8 @@ without publishing secrets, payout identities, or sensitive local coordinates.
 
 ## Changelog
 
+- 2026-08-10: Added a bounded hash manifest of finalized sanitized artifacts for
+  private lab archival redundancy.
 - 2026-08-10: Reconciled external `mining-qa-lab` source expectations with the
   versioned cross-repository contract.
 - 2026-08-10: Added pre-hardware verification of orchestrated expected testcode

@@ -11,6 +11,9 @@
 - [x] **TR-RESULTS-AC-04:** An orchestrated run atomically writes a bounded
   contract-v1 child-result pointer with correlation and published child
   identity/link.
+- [x] **TR-RESULTS-AC-09:** The pointer optionally identifies a bounded,
+  SHA-256-addressed artifact manifest for compatible lab readers without making
+  local archival a substitute for required remote child publication.
 
 ## Interfaces and compatibility
 

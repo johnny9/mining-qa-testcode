@@ -47,8 +47,8 @@
 
 - Local JSON is the canonical complete run record; HTML is a view.
 - The result pointer contains only bounded correlation, status, child URL,
-  and local-result location needed by the lab. Its top-level
-  `contract_version` is `1`.
+  local-result location, and optional artifact-manifest descriptor needed by the
+  lab. Its top-level `contract_version` is `1`.
 
 ## Contract constraints
 
@@ -61,6 +61,8 @@
 - Runner publications are detailed child results; only the orchestrator owns
   aggregate gate status.
 - Pointer writes are atomic and bounded.
+- Manifest production precedes the atomic pointer write; local archival is
+  additive and never relaxes required Mining QA publisher outcomes.
 
 ### Forbidden behavior
 
@@ -80,7 +82,8 @@ publisher records without changing the underlying test truth.
 1. Capture test/cleanup events and finalize the run summary.
 2. Persist canonical local JSON and HTML.
 3. Invoke remote publishers and append their records.
-4. Re-finalize local publication metadata and atomically write the pointer.
+4. Re-finalize local publication metadata and write the artifact manifest.
+5. Atomically write the pointer containing its verified descriptor.
 
 ## Failure and recovery
 

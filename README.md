@@ -277,6 +277,13 @@ pair gets `test.log`, `device-state.jsonl`, `telemetry.jsonl`, `api.jsonl`,
 `serial.log`, a baseline, and the downloaded device log. Cleanup failures are
 test errors, never hidden.
 
+For orchestrated runs, the runner also writes a bounded
+`orchestration-artifacts.json` manifest after publishers finish. It records safe
+relative paths, exact byte sizes, SHA-256 values, and media types so
+`mining-qa-lab` can independently copy and verify a private redundant archive.
+This does not replace Mining QA Status: required child publication retains its
+normal failure semantics and the lab archive is never a publication fallback.
+
 ### Chart markers
 
 The runner registers a `CHART` log level between `INFO` and `WARNING`. A test can
@@ -426,7 +433,7 @@ without adding model checks to shared test logic.
 
 ## Related Mining QA projects
 
-- [`mining-qa-lab`](https://github.com/johnny9/mining-qa-lab) schedules trusted work, leases lab hardware, invokes `miner-test`, and publishes aggregate gate status.
+- [`mining-qa-lab`](https://github.com/johnny9/mining-qa-lab) schedules trusted work, leases lab hardware, invokes `miner-test`, privately archives manifest-listed artifacts, and publishes aggregate gate status.
 - [`mining-qa-status`](https://github.com/johnny9/mining-qa-status) collects and presents detailed child results and aggregate lab gates.
 
 The versioned process and result-pointer boundary used by the lab is documented in [contracts/orchestration-v1.md](contracts/orchestration-v1.md). Testcode contributors do not need access to lab configuration, durable orchestration state, or deployment credentials.

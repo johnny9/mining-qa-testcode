@@ -25,6 +25,7 @@
 - Remote success is mistaken for test success.
 - Publisher retry creates duplicate children.
 - Pointer is partial, oversized, or correlated to the wrong assignment.
+- Pointer identifies a partial, tampered, or unbounded artifact manifest.
 - Backend schema drift breaks publication after hardware work completes.
 
 ## Security, privacy, and safety

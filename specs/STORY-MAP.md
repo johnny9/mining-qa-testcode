@@ -34,6 +34,8 @@ feature directory.
 
 - Keep evidence useful without exposing lab identities →
   [Artifacts, privacy, and provenance](test-runner/artifacts-privacy-and-provenance/SPEC.md)
+- Produce a bounded hash manifest for private lab archival redundancy →
+  [Artifacts, privacy, and provenance](test-runner/artifacts-privacy-and-provenance/SPEC.md)
 - Publish one detailed model locally and remotely →
   [Result model and publishing](test-runner/result-model-and-publishing/SPEC.md)
 

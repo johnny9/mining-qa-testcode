@@ -84,6 +84,11 @@ object:
   "successful": true,
   "status": "passed",
   "artifact_root": "/private/local/path",
+  "artifact_manifest": {
+    "path": "orchestration-artifacts.json",
+    "size_bytes": 1234,
+    "sha256": "64-lowercase-hex-characters"
+  },
   "publishers": [
     {
       "name": "mining_qa_status",
@@ -104,8 +109,19 @@ object:
   `detail` are optional.
 - The lab may derive a Mining QA Status child ID from the final path segment of
   a successful `mining_qa_status` publisher URL.
-- `artifact_root` is a private diagnostic pointer. The lab does not read those
-  artifacts or republish their detailed contents.
+- `artifact_root` is a private worker-local diagnostic pointer.
+- `artifact_manifest` is optional for compatibility with legacy version-1
+  writers. When present, its relative `path`, byte size, and SHA-256 identify a
+  UTF-8 JSON manifest below `artifact_root`.
+- The manifest has `version: 1`, the pointer `run_id`, and an `artifacts` list.
+  Each artifact has a safe relative `path`, `size_bytes`, lowercase `sha256`,
+  and optional single-line `media_type`.
+- The manifest is limited to 256 KiB, 512 artifacts, 50 MiB per artifact, and
+  512 MiB total. Paths must remain below `artifact_root`; symlinks and path
+  traversal are rejected.
+- The lab may copy only manifest-listed, hash-verified artifacts into its
+  private per-assignment/per-attempt archive. It does not republish their
+  contents or use them to reconstruct a child result.
 
 For an SSH worker, the lab retrieves at most 64 KiB plus one byte and applies
 the same validation locally.
@@ -119,6 +135,13 @@ the same validation locally.
   state, parent publication, and child linking.
 - Missing or invalid pointer data, unsupported contract versions, installation
   failures, process/SSH failures, and timeouts produce an assignment error.
+- A missing optional artifact manifest is accepted from a legacy version-1
+  writer. A provided manifest that is malformed, oversized, unsafe, missing an
+  artifact, or fails a size/hash check produces an assignment error.
+- Local archival is redundant private evidence only. Testcode still publishes
+  each detailed child to Mining QA Status and the lab still publishes/links the
+  parent when that integration is enabled; archiving never substitutes for
+  either publication.
 - A result-pointer or publication failure never causes the lab to reconstruct a
   detailed child result from private artifacts.
 
