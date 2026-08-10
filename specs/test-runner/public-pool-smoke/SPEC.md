@@ -13,5 +13,8 @@ configured public pool without requiring a share in a short window.
 
 ## Changelog
 
+- 2026-08-10: Let reconfiguration preserve the current device pool username
+  when no explicit device identity is supplied, while keeping the independent
+  probe identity separate.
 - 2026-08-10: Reconciled observational and reconfiguration modes, independent
   probe identity, stable mining criteria, and cleanup relationship.

@@ -4,12 +4,35 @@ import asyncio
 import json
 import os
 from dataclasses import asdict
+from typing import Any, Mapping
 
 from miner_testcode import capabilities as caps
 from miner_testcode.devices.base import PoolSettings
 from miner_testcode.interfaces.stratum import StratumV1Probe
 from miner_testcode.state import DeviceState
 from miner_testcode.testcase import MinerTestCase
+
+
+def _resolve_pool_usernames(
+    settings: Mapping[str, Any],
+    initial_info: Mapping[str, Any],
+    *,
+    configure_device: bool,
+) -> tuple[str, str]:
+    configured_probe_username = settings.get("probe_username")
+    username_value = settings.get("username")
+    username_env = str(settings.get("username_env", "MINER_TEST_POOL_USER"))
+    if username_value is None:
+        username_value = os.environ.get(username_env)
+    if username_value is None:
+        username_value = (
+            initial_info.get("stratumUser")
+            if configure_device
+            else configured_probe_username
+        )
+    device_username = str(username_value or "")
+    probe_username = str(configured_probe_username or device_username)
+    return device_username, probe_username
 
 
 class PublicPoolSmokeTest(MinerTestCase):
@@ -26,17 +49,21 @@ class PublicPoolSmokeTest(MinerTestCase):
         host = str(settings.get("host", "public-pool.io"))
         port = int(settings.get("port", 3333))
         configure_device = bool(settings.get("configure_device", True))
-        configured_probe_username = settings.get("probe_username")
-        username_value = settings.get("username")
         username_env = str(settings.get("username_env", "MINER_TEST_POOL_USER"))
-        if username_value is None:
-            username_value = os.environ.get(username_env)
-        if username_value is None and not configure_device:
-            username_value = configured_probe_username
-        username = str(username_value or "")
-        if not username:
+        device_username, probe_username = _resolve_pool_usernames(
+            settings,
+            initial_info,
+            configure_device=configure_device,
+        )
+        if not device_username:
+            current_identity = (
+                " or ensure the device reports its current pool username"
+                if configure_device
+                else ""
+            )
             self.fail(
-                f"set {username_env} or tests.public_pool_smoke.username for the pool test"
+                f"set {username_env} or tests.public_pool_smoke.username"
+                f"{current_identity} for the pool test"
             )
         password_value = settings.get("password")
         password_env = str(settings.get("password_env", "MINER_TEST_POOL_PASSWORD"))
@@ -55,7 +82,6 @@ class PublicPoolSmokeTest(MinerTestCase):
         stable_samples = int(settings.get("stable_samples", 10))
         minimum_job_notifications = int(settings.get("minimum_job_notifications", 1))
 
-        probe_username = str(configured_probe_username or username)
         probe = StratumV1Probe(
             host,
             port,
@@ -85,7 +111,7 @@ class PublicPoolSmokeTest(MinerTestCase):
                 PoolSettings(
                     host=host,
                     port=port,
-                    username=username,
+                    username=device_username,
                     password=device_password,
                     suggested_difficulty=suggested,
                     tls=tls,

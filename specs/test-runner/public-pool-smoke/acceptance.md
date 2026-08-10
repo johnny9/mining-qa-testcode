@@ -6,8 +6,10 @@
   authorize, and configured job reception within a timeout.
 - [x] **TR-POOL-SMOKE-AC-02:** Observational mode verifies existing host/port
   and performs no device write.
-- [x] **TR-POOL-SMOKE-AC-03:** Reconfiguration mode uses adapter cleanup and
-  refuses unsafe write-only password mutation.
+- [x] **TR-POOL-SMOKE-AC-03:** Reconfiguration mode applies the configured
+  host and port through adapter cleanup, preserves the device's current pool
+  username when no replacement is supplied, and refuses unsafe write-only
+  password mutation.
 - [x] **TR-POOL-SMOKE-AC-04:** Share acceptance is recorded when available but
   is optional by default.
 
@@ -22,15 +24,22 @@
 
 - [x] **TR-POOL-SMOKE-AC-07:** Probe, readiness, work age, sample count, and
   cleanup are bounded.
-- [ ] **TR-POOL-SMOKE-AC-08:** A current authorized end-to-end run proves live
+- [x] **TR-POOL-SMOKE-AC-08:** A current authorized end-to-end run proves live
   public job reception, stable healthy device mining, and original pool restore.
 
 ## Verification evidence
 
 - `tests.unit.test_stratum` — independent probe handshake/job protocol;
   reconciled 2026-08-10.
-- Source and lifecycle unit tests cover configuration and cleanup paths.
-- Full public-pool HIL was not run for this documentation iteration.
+- `tests.unit.test_public_pool_smoke` covers explicit, environment, current
+  device, and disposable probe identity selection; reconciled 2026-08-10.
+- `tests.unit.test_bonanza_lifecycle` covers host/port configuration and full
+  pool restoration; reconciled 2026-08-10.
+- Authorized Bitaxe Gamma 602 HIL on firmware `f711cad` repaired a stale device
+  port to the intended `public-pool.io:3333` baseline. The follow-up smoke
+  received a Stratum job, observed stable healthy mining, retained port `3333`
+  through cleanup, and passed independent post-cleanup state and
+  artifact-privacy checks; run 2026-08-10.
 
 ## Acceptance rule
 

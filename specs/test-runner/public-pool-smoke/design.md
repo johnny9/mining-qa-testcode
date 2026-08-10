@@ -24,11 +24,15 @@
   accepted-share policy.
 - `configure_device=false` pairs with read-only operation when the existing
   device pool already matches.
+- In reconfiguration mode, an explicit or environment-provided device username
+  takes precedence; otherwise the current device pool username is preserved.
 
 ### Environment
 
 - Username/password default to `MINER_TEST_POOL_USER` and
   `MINER_TEST_POOL_PASSWORD` or configured variable names.
+- The username environment variable is optional when reconfiguration can
+  preserve a non-empty username from the device baseline.
 - Password is not written unless explicitly enabled and a restorable baseline
   password exists.
 
@@ -52,6 +56,8 @@
 
 - Probe identity may be public/disposable and independent of the device's
   private payout identity.
+- A disposable probe identity is never substituted for the device's current
+  payout identity during reconfiguration.
 - Probe runs concurrently with device observation and is cancelled/collected
   on cleanup.
 - Stable health requires consecutive fresh samples, minimum hashrate, no fault,

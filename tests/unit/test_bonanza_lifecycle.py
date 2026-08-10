@@ -219,16 +219,20 @@ class BonanzaLifecycleTest(unittest.IsolatedAsyncioTestCase):
             configured = fake_api.patches[0]["pools"][0]
             self.assertEqual(configured["id"], 0)
             self.assertEqual(configured["stratumURL"], "new.pool")
+            self.assertEqual(configured["stratumPort"], 5555)
             self.assertEqual(configured["stratumPassword"], "*****")
             self.assertEqual(fake_api.info["stratumURL"], "new.pool")
+            self.assertEqual(fake_api.info["stratumPort"], 5555)
 
             await device.restore_clean_state(baseline)
 
             restored = fake_api.patches[-1]["pools"]
             self.assertEqual(len(restored), 2)
             self.assertEqual(restored[0]["stratumURL"], "old.pool")
+            self.assertEqual(restored[0]["stratumPort"], 3333)
             self.assertEqual(restored[1]["stratumURL"], "backup.pool")
             self.assertEqual(fake_api.info["stratumURL"], "old.pool")
+            self.assertEqual(fake_api.info["stratumPort"], 3333)
             self.assertEqual(fake_api.info["primaryPoolIndex"], 0)
             self.assertEqual(fake_api.info["secondaryPoolIndex"], 1)
             self.assertTrue(fake_api.info["useFallbackStratum"])

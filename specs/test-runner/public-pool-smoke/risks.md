@@ -29,6 +29,7 @@
 | Public pool unavailable | False hardware suspicion | Independent probe failure | Report external dependency; retry only in a new run |
 | Low difficulty/share randomness | No accepted share | Optional share policy | Require jobs and health, not share by default |
 | Private identity published | Privacy loss | Redaction tests | Separate probe identity and final sanitation |
+| Disposable probe identity written to device | Payouts use the wrong identity | Username-resolution regression | Preserve current device identity unless an explicit replacement is supplied |
 | Temporary pool not restored | Mining redirected | Cleanup final-state check | Fail run and operator recovery |
 | Read-only mode writes | Unauthorized mutation | Transport guard | Pair observational config and negative tests |
 

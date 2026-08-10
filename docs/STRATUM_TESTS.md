@@ -30,6 +30,10 @@ The test opens its own Stratum connection to check the pool handshake. At the
 same time, it watches the mining device over its configured interfaces and
 captures the ESP serial log.
 
+With `configure_device = true`, the configured host and port are applied to the
+miner. If no replacement username is supplied, the miner keeps its current
+pool username. A separate `probe_username` remains probe-only.
+
 Run only this test:
 
 ```bash

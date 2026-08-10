@@ -95,6 +95,11 @@ Set the value in the shell before the run:
 export MINER_TEST_POOL_USER='your-test-identity'
 ```
 
+When `configure_device = true` and no username is supplied in configuration or
+the environment, the smoke test preserves the device's current pool username
+while applying the configured host and port. A separate `probe_username` is
+used only by the independent Stratum probe and is never written to the device.
+
 Passwords use the same pattern. The default variable is
 `MINER_TEST_POOL_PASSWORD`.
 

@@ -29,7 +29,8 @@ pool. Any temporary pool change is restored.
 ## Primary flow
 
 1. Resolve pool/probe settings and launch an independent bounded Stratum probe.
-2. Optionally configure/restart the device, or verify its existing pool in
+2. Optionally configure/restart the device, preserving its current payout
+   identity when no replacement is supplied, or verify its existing pool in
    read-only observational mode.
 3. Require protocol job evidence and a stable device window with hashrate and
    fresh work; record a share when available without requiring it by default.
