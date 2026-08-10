@@ -1,4 +1,4 @@
 interface:
   display_name: "Project Specs"
-  short_description: "Create and maintain miner-testcode specifications"
-  default_prompt: "Use $specs to create or reconcile a feature specification for miner-testcode."
+  short_description: "Create and maintain mining-qa-testcode specifications"
+  default_prompt: "Use $specs to create or reconcile a feature specification for mining-qa-testcode."

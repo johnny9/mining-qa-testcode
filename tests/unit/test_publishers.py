@@ -89,7 +89,7 @@ def make_summary(root: Path, *, successful: bool = True) -> RunSummary:
                 source_path="tests/e2e/test_public_pool_smoke.py",
                 source_line=22,
                 source_url=(
-                    "https://github.com/owner/miner-testcode/blob/"
+                    "https://github.com/owner/mining-qa-testcode/blob/"
                     "abcdef0123456789abcdef0123456789abcdef01/"
                     "tests/e2e/test_public_pool_smoke.py#L22"
                 ),
@@ -157,9 +157,9 @@ def make_summary(root: Path, *, successful: bool = True) -> RunSummary:
         unexpected_successes=0,
         successful=successful,
         test_code=TestCodeRecord(
-            repository="owner/miner-testcode",
+            repository="owner/mining-qa-testcode",
             commit_sha="abcdef0123456789abcdef0123456789abcdef01",
-            url="https://github.com/owner/miner-testcode",
+            url="https://github.com/owner/mining-qa-testcode",
             published=True,
         ),
         orchestration={
@@ -226,7 +226,7 @@ class LocalPublisherTest(unittest.TestCase):
         self.assertIn("tests.PublicPoolSmoke.test_mines", report)
         self.assertIn("001-device-test/test.log", report)
         self.assertIn("tests/e2e/test_public_pool_smoke.py#L22", report)
-        self.assertIn("owner/miner-testcode@abcdef012345", report)
+        self.assertIn("owner/mining-qa-testcode@abcdef012345", report)
         self.assertIn("Mining telemetry time series", report)
         self.assertIn("Pool configured", report)
         self.assertIn("marker--good", report)
@@ -235,7 +235,7 @@ class LocalPublisherTest(unittest.TestCase):
         self.assertNotIn(str(summary.artifact_root), report)
         self.assertNotIn("file://", report)
         self.assertEqual(payload["status"], "passed")
-        self.assertEqual(payload["test_code"]["repository"], "owner/miner-testcode")
+        self.assertEqual(payload["test_code"]["repository"], "owner/mining-qa-testcode")
 
     def test_renders_one_telemetry_chart_per_test_module(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -371,7 +371,7 @@ class RemotePublisherTest(unittest.TestCase):
         )
         self.assertEqual(
             result_payload["details"]["test_code"]["repository"],
-            "owner/miner-testcode",
+            "owner/mining-qa-testcode",
         )
         self.assertEqual(
             result_payload["details"]["telemetry"][0]["markers"][0]["label"],

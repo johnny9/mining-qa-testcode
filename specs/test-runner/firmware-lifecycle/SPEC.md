@@ -13,5 +13,7 @@ the target firmware before testing.
 
 ## Changelog
 
+- 2026-08-10: Moved whole-gate artifact selection/deployment ownership to the
+  external `mining-qa-lab` repository.
 - 2026-08-10: Reconciled opt-in upgrade, artifact roles, paced upload,
   shell-free flashing, reboot/version verification, and no automatic rollback.

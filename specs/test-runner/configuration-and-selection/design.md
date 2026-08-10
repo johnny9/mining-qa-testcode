@@ -33,8 +33,8 @@
 
 - A string exactly equal to `${NAME}` resolves from the environment or fails.
   Partial interpolation is intentionally unsupported.
-- Orchestrator metadata is a separate bounded JSON environment contract owned
-  by [Assignment execution](../../lab-orchestrator/assignment-execution/SPEC.md).
+- Lab metadata is the separate bounded JSON environment contract in
+  [orchestration contract v1](../../../contracts/orchestration-v1.md).
 
 ### Python API
 
@@ -106,7 +106,7 @@
 | [Lifecycle and cleanup](../lifecycle-and-cleanup/SPEC.md) | Selection supplies the immutable per-case context. |
 | [Device capability contract](../device-capability-contract/SPEC.md) | Device type selects an adapter; capabilities select behavior. |
 | [Result model and publishing](../result-model-and-publishing/SPEC.md) | Publisher tables and public labels shape output destinations. |
-| [Assignment execution](../../lab-orchestrator/assignment-execution/SPEC.md) | Orchestrator uses only supported CLI/environment overrides. |
+| [Lab assignment execution](https://github.com/johnny9/mining-qa-lab/blob/main/specs/lab-orchestrator/assignment-execution/SPEC.md) | External lab uses only contract-v1 CLI/environment overrides. |
 
 ## Verification approach
 

@@ -46,8 +46,9 @@
 ### Files, artifacts, payloads, and persistent state
 
 - Local JSON is the canonical complete run record; HTML is a view.
-- The result pointer contains only bounded correlation, status, child ID/URL,
-  and local-result location needed by the orchestrator.
+- The result pointer contains only bounded correlation, status, child URL,
+  and local-result location needed by the lab. Its top-level
+  `contract_version` is `1`.
 
 ## Contract constraints
 
@@ -103,8 +104,9 @@ Large evidence uses authorized artifact upload rather than inline payloads.
 | Related feature | Relationship |
 |---|---|
 | [Artifacts, privacy, and provenance](../artifacts-privacy-and-provenance/SPEC.md) | Supplies safe evidence and exact source identity. |
-| [Assignment execution](../../lab-orchestrator/assignment-execution/SPEC.md) | Supplies correlation variables and consumes the pointer. |
-| [Parent gate publication](../../lab-orchestrator/parent-gate-publication/SPEC.md) | Aggregates child status/link without duplicating artifacts. |
+| [Orchestration contract v1](../../../contracts/orchestration-v1.md) | Defines correlation variables and the pointer consumed externally. |
+| [Lab assignment execution](https://github.com/johnny9/mining-qa-lab/blob/main/specs/lab-orchestrator/assignment-execution/SPEC.md) | Supplies correlation variables and consumes the pointer. |
+| [Parent gate publication](https://github.com/johnny9/mining-qa-lab/blob/main/specs/lab-orchestrator/parent-gate-publication/SPEC.md) | Aggregates child status/link without duplicating artifacts. |
 | [Lifecycle and cleanup](../lifecycle-and-cleanup/SPEC.md) | Cleanup failures remain part of authoritative outcome. |
 
 ## Verification approach

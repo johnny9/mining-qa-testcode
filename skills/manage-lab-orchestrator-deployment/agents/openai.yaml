@@ -1,4 +1,0 @@
-interface:
-  display_name: "Manage Lab Orchestrator Deployment"
-  short_description: "Safely deploy and update the lab orchestrator"
-  default_prompt: "Use $manage-lab-orchestrator-deployment to inspect and safely update the lab orchestrator service."

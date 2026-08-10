@@ -8,5 +8,7 @@ The runner does not schedule the lab, arbitrate shared devices, deploy a build
 for an entire gate, or publish the aggregate parent gate. See the canonical
 [specification index](../INDEX.md) for its feature slices and lifecycle state.
 
-When a runner feature changes, reconcile the feature's five documents and any
-related orchestrator contract before checking acceptance evidence.
+When a runner feature changes, reconcile the feature's five documents. Changes
+to the process/result boundary also update
+[orchestration contract v1](../../contracts/orchestration-v1.md) and require a
+coordinated `mining-qa-lab` change.

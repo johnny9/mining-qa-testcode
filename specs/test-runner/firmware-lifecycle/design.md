@@ -96,7 +96,7 @@
 | [Lifecycle and cleanup](../lifecycle-and-cleanup/SPEC.md) | Upgrade precedes mutable baseline; firmware is not per-test cleanup state. |
 | [Transport interfaces](../transport-interfaces/SPEC.md) | Supplies bounded OTA and serial execution. |
 | [ESP-Miner device adapters](../esp-miner-device-adapters/SPEC.md) | Owns artifact roles and model identity. |
-| [Artifact resolution and deployment](../../lab-orchestrator/artifact-resolution-and-deployment/SPEC.md) | Orchestrator can install exact CI artifacts before runner execution. |
+| [Lab artifact deployment](https://github.com/johnny9/mining-qa-lab/blob/main/specs/lab-orchestrator/artifact-resolution-and-deployment/SPEC.md) | External lab can install exact CI artifacts before runner execution. |
 
 ## Verification approach
 

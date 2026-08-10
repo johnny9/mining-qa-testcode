@@ -9,7 +9,8 @@
 - [x] **TR-RESULTS-AC-03:** Each publisher records its own status and required
   publishers affect final exit status while best-effort publishers do not.
 - [x] **TR-RESULTS-AC-04:** An orchestrated run atomically writes a bounded
-  child-result pointer with correlation and published child identity/link.
+  contract-v1 child-result pointer with correlation and published child
+  identity/link.
 
 ## Interfaces and compatibility
 
@@ -27,8 +28,10 @@
 
 ## Verification evidence
 
-- `tests.unit.test_publishers` and `tests.unit.test_runner` cover the result
-  model, local output, remote publishers, and runner integration;
+- `tests.unit.test_publishers`, `tests.unit.test_runner`, and
+  `tests.unit.test_config` cover the result model, local output, remote
+  publishers, atomic 64-KiB-bounded contract-v1 pointer, legacy-v1 metadata,
+  and non-integer/unsupported version rejection;
   reconciled 2026-08-10.
 - No live remote publisher verification was performed for this documentation
   iteration.

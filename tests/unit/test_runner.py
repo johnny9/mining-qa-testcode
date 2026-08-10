@@ -1,19 +1,63 @@
 from __future__ import annotations
 
 import io
+import json
 import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
 
 from miner_testcode.artifacts import RunArtifacts
+from miner_testcode.config import ConfigError
 from miner_testcode.provenance import ResolvedTestCode
-from miner_testcode.results import TestCodeRecord
-from miner_testcode.runner import MiningTestResult
+from miner_testcode.results import PublisherRecord, RunSummary, TestCodeRecord
+from miner_testcode.runner import (
+    MiningTestResult,
+    _result_pointer_payload,
+    _write_result_pointer,
+)
 from miner_testcode.telemetry import STANDARD_MINING_METRICS, TelemetryCapture
 
 
 class ResultMarkerTest(unittest.TestCase):
+    def test_writes_versioned_result_pointer_atomically(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            summary = RunSummary(
+                run_id="run-1",
+                artifact_root=root / "artifacts",
+                started_at=1.0,
+                finished_at=2.0,
+                devices=(),
+                tests=(),
+                tests_run=1,
+                failures=0,
+                errors=0,
+                skipped=0,
+                expected_failures=0,
+                unexpected_successes=0,
+                successful=True,
+                publishers=[
+                    PublisherRecord(
+                        name="mining_qa_status",
+                        success=True,
+                        required=True,
+                        url="https://status.example/results/child-1",
+                    )
+                ],
+            )
+            pointer = root / "jobs" / "result-pointer.json"
+
+            payload = _result_pointer_payload(summary, successful=True)
+            _write_result_pointer(pointer, payload)
+
+            self.assertEqual(json.loads(pointer.read_text())["contract_version"], 1)
+            self.assertEqual(json.loads(pointer.read_text())["status"], "passed")
+            self.assertEqual(list(pointer.parent.glob("*.tmp")), [])
+
+            with self.assertRaisesRegex(ConfigError, "exceeds 64 KiB"):
+                _write_result_pointer(pointer, {"detail": "x" * (65 * 1024)})
+
     def test_success_marker_names_the_test_method(self) -> None:
         class ExampleCase(unittest.TestCase):
             def test_named_feature(self) -> None:
@@ -40,9 +84,9 @@ class ResultMarkerTest(unittest.TestCase):
                 test_code=ResolvedTestCode(
                     root=Path(__file__).resolve().parents[2],
                     record=TestCodeRecord(
-                        repository="owner/miner-testcode",
+                        repository="owner/mining-qa-testcode",
                         commit_sha="a" * 40,
-                        url="https://github.com/owner/miner-testcode",
+                        url="https://github.com/owner/mining-qa-testcode",
                     ),
                 ),
             )

@@ -1,6 +1,7 @@
-# miner-testcode
+# mining-qa-testcode
 
-`miner-testcode` is a Python `unittest` runner for repeatable, end-to-end tests
+`mining-qa-testcode` is the hardware-test runner in the Mining QA project
+family. It provides repeatable Python `unittest` tests
 against real Bitcoin mining devices. Tests describe capabilities and normalized
 state instead of a particular ASIC or firmware API. Device adapters own the
 hardware-specific behavior.
@@ -39,39 +40,18 @@ AxeOS artifacts; it has no separate bridge firmware lifecycle.
   normalization.
 - Configurable local HTML/JSON, GitHub Check Run, and Mining QA Status result
   publishers.
-- A durable local orchestrator for GitHub push/PR events, cron schedules,
-  compatible lab-device assignment, local or SSH execution, and parent gate
-  publication to Mining QA Status.
-- An exact-release systemd guide and installable agent skill for inspecting,
-  updating, and rolling back the orchestrator safely.
-- Parent gate metadata records the requesting contributor and trusted or local
-  approval source. Mining QA Status owns the GitHub App credentials and turns
-  that aggregate into the informational Check Run and PR summary; the hardware
-  host does not receive those credentials.
 
 ## Developer contracts
 
 Start with [AGENTS.md](AGENTS.md) for working rules and verification commands.
 The durable system and feature contracts live in [specs/](specs/README.md):
-[OVERVIEW.md](specs/OVERVIEW.md) defines the runner/orchestrator boundary,
+[OVERVIEW.md](specs/OVERVIEW.md) defines the runner and its external boundaries,
 [INDEX.md](specs/INDEX.md) lists every supported feature slice, and
 [STORY-MAP.md](specs/STORY-MAP.md) navigates them by operator outcome.
 
 Temporary implementation plans belong in [plans/](plans/README.md). Feature
 behavior, constraints, acceptance criteria, and current evidence belong in the
 specification tree and must be reconciled in the same change.
-
-Repository-owned installable skills live under [skills/](skills/). Validate and
-install the deployment skill with:
-
-```bash
-./scripts/validate-codex-skills
-./scripts/manage-codex-skills status manage-lab-orchestrator-deployment
-./scripts/manage-codex-skills install manage-lab-orchestrator-deployment
-```
-
-Installation creates a repository-backed link and refuses to replace any
-existing destination.
 
 ## Architecture
 
@@ -336,7 +316,7 @@ Before either remote publisher runs, the runner resolves its own GitHub `origin`
 and exact `HEAD`. Remote publication is refused if tracked harness code is dirty
 or that commit is not present in a local `origin/*` ref. Results therefore carry
 two distinct revisions: the configured firmware repository/commit under test and
-the automatically discovered `miner-testcode` revision that executed it. Every
+the automatically discovered `mining-qa-testcode` revision that executed it. Every
 test result links to its exact GitHub blob and source line.
 
 Published text artifacts receive a final privacy pass. Paths inside this
@@ -368,7 +348,7 @@ each test name links to the executed test method at that commit.
 [publishers.github]
 enabled = true
 required = true
-name = "miner-testcode / hardware-e2e"
+name = "mining-qa-testcode / hardware-e2e"
 token_env = "GITHUB_TOKEN"
 repository_env = "GITHUB_REPOSITORY"
 sha_env = "GITHUB_SHA"
@@ -406,7 +386,7 @@ repository_env = "GITHUB_REPOSITORY"
 commit_sha_env = "GITHUB_SHA"
 target_type = "bitaxe"
 target_name = "Bitaxe Bonanza 1002"
-suite = "miner-testcode"
+suite = "mining-qa-testcode"
 upload_artifacts = true
 ```
 
@@ -444,113 +424,9 @@ Existing generic tests then run unchanged if the adapter provides their required
 capabilities. Device-only tests can still declare a more specific capability
 without adding model checks to shared test logic.
 
-## Test gate orchestrator
+## Related Mining QA projects
 
-The optional orchestrator application watches configured repositories, turns
-pushes, trusted-contributor pull requests, schedules, and manual requests into
-durable gate runs, and leases appropriate lab setups to individual test modules.
-`miner-test` still publishes each detailed test result. The orchestrator only
-publishes the parent gate record and links the child result IDs returned by the
-normal publisher.
+- [`mining-qa-lab`](https://github.com/johnny9/mining-qa-lab) schedules trusted work, leases lab hardware, invokes `miner-test`, and publishes aggregate gate status.
+- [`mining-qa-status`](https://github.com/johnny9/mining-qa-status) collects and presents detailed child results and aggregate lab gates.
 
-Install and initialize it with:
-
-```bash
-python3 -m pip install -e '.[orchestrator]'
-miner-orchestrator init-config orchestrator.yaml
-miner-orchestrator --config orchestrator.yaml validate
-miner-orchestrator --config orchestrator.yaml serve
-```
-
-The service binds `127.0.0.1:8765` by default. Its local control plane has an
-overview at `/`, structured gate forms at `/gates`, lab and device forms at
-`/lab`, one-SHA untrusted pull-request approval at `/trigger`, and an advanced
-YAML editor at `/config`. Its OpenAPI document is `/openapi.json`, and
-interactive API documentation is at `/docs`. With the default
-`controller.auth_mode: bearer`, state-changing calls
-require the bearer token stored at
-`.miner-orchestrator/api-token`, unless `MINER_ORCHESTRATOR_API_TOKEN` or the
-configured token environment variable is set. The token is never printed.
-
-A lab that trusts its LAN can bind `0.0.0.0`, set `auth_mode: none`, and list
-the exact loopback and LAN CIDRs in `controller.allowed_networks`. No-auth mode
-is rejected unless at least one allowed network is configured, and requests
-whose direct socket address is outside those networks receive HTTP 403. Keep
-bearer mode for any host reachable outside a trusted network.
-
-YAML remains the source of truth. API updates require the current `ETag` in an
-`If-Match` header, validate the complete configuration, retain a timestamped
-backup, and atomically replace the active file. Invalid manual edits do not
-replace the in-memory snapshot until `/api/v1/config/reload` succeeds.
-
-The configuration separates public gate selectors from private lab coordinates:
-
-- `repositories`: GitHub owner/name, main/master branches, exact trusted PR
-  contributor logins, and an `event_source` of `github` or `qa_status`. QA
-  Status feed consumers keep independent SQLite cursors, so redundant lab
-  orchestrators can observe the same authenticated webhook delivery without a
-  shared claim. An optional GitHub Actions artifact map pins workflow, artifact
-  name, archive member, download bounds, and token environment.
-- `test_modules`: unittest patterns, compatible device types, interface needs,
-  and timeouts.
-- `gates`: triggers, changed-path filters, module lists, setup matrices, and
-  required-result policy. A gate may deploy one verified OTA artifact to named
-  setup roles before any test module starts.
-- `testcode`: optional GitHub repository/branch policy for installing current
-  testcode before assignments. Existing configurations default to disabled.
-- `lab.hosts`: local or SSH execution coordinates. SSH execution explicitly
-  disables agent forwarding. When testcode installation is enabled, every host
-  also defines absolute managed checkout and isolated runner-venv paths.
-- `lab.devices`: names, adapter types, API addresses, stable USB identity,
-  tags, and a local photo.
-- `lab.setups`: device roles, a stable platform key, runner TOML, and runner
-  device names.
-
-The REST API provides CRUD endpoints for each configuration resource, full YAML
-validation/replacement, host and device probes, USB discovery, device photos,
-setup preflight, manual gate runs, and read-only event/run/assignment history.
-An operator can list open PRs and approve one exact, freshly revalidated head
-SHA for one gate without adding its contributor to the trusted list. The
-resulting gate retains pull-request, contributor, branch, and commit metadata.
-Use `configs/orchestrator.example.yaml` as the complete schema example.
-
-With `testcode.enabled: true`, the first assignment for each gate and worker
-host resolves the configured branch head, records its exact commit under the
-orchestrator state directory, and prepares that same commit before every later
-assignment for that gate/host. A moving branch therefore cannot mix testcode
-revisions inside one gate. The worker keeps a managed Git checkout so
-`miner-test` can report source provenance, installs it editable into the
-host-specific runner venv, verifies the imported package path, and launches the
-venv's executable. Relative `runner_profile` paths resolve inside the managed
-checkout; private profiles may remain as ignored, untracked files there.
-
-The controller needs Git access to resolve the branch. Each local or SSH worker
-needs Git, the configured Python with venv support, and package-index access for
-the project's dependencies. Tracked changes, a wrong checkout origin, corrupt
-pin state, install/import failure, or runner repository/SHA mismatch fails the
-assignment before firmware deployment or hardware construction. The managed
-venv must differ from the active orchestrator service environment. This feature
-does not update or restart that service; disabling it restores the configured
-host `miner_test` behavior.
-
-For a persistent systemd user service, exact-SHA updates, health checks, and
-rollback, follow the simplified human guide in
-[ORCHESTRATOR_DEPLOYMENT.md](docs/ORCHESTRATOR_DEPLOYMENT.md). The tracked
-example unit lives at
-[miner-orchestrator.service](skills/manage-lab-orchestrator-deployment/assets/miner-orchestrator.service).
-
-On first observation, a branch or pull request is recorded as a baseline rather
-than unexpectedly running hardware. Later SHA changes create events. A newer PR
-head supersedes queued work for the older head but never interrupts an active
-device cleanup. SQLite WAL state preserves events, assignments, leases, and QA
-publication IDs across restarts; an interrupted active assignment fails closed.
-
-For `github_actions` artifacts, the orchestrator waits for a successful workflow
-run whose `head_sha` exactly matches the event commit, downloads the named ZIP
-with `GITHUB_TOKEN`, verifies GitHub's archive digest, extracts only the expected
-basename, and records the firmware SHA-256. ESP-Miner HTTP deployment accepts
-only that configured OTA member, checks the live board version before upload,
-uses `/api/system/OTA`, waits for the same board identity to return, and writes a
-fail-closed per-run deployment marker. Factory/merged images are not used for
-OTA. Push events also retain an associated merged PR number when GitHub reports
-one, allowing opt-in PR regression cases to run after merge.
+The versioned process and result-pointer boundary used by the lab is documented in [contracts/orchestration-v1.md](contracts/orchestration-v1.md). Testcode contributors do not need access to lab configuration, durable orchestration state, or deployment credentials.

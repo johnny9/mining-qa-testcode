@@ -55,7 +55,8 @@ links, and referenced repository paths.
 
 ## Project-specific safety audit
 
-- [ ] Runner/orchestrator child-parent publication ownership remains intact.
+- [ ] The cross-repository orchestration contract remains versioned and the
+  testcode-child/lab-parent publication ownership remains intact.
 - [ ] Device writes retain baseline, cleanup, negative, and read-only coverage.
 - [ ] Secrets and private coordinates remain environment-only or ignored local
   configuration.

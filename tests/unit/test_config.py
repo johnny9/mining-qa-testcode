@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import tempfile
 import unittest
@@ -26,18 +27,44 @@ class ConfigTest(unittest.TestCase):
         ):
             self.assertEqual(_orchestration_metadata(), {"gate_run_id": "run-1"})
 
+        with mock.patch.dict(
+            os.environ,
+            {
+                "MINER_TEST_ORCHESTRATION_METADATA": (
+                    '{"contract_version":2,"gate_run_id":"run-1"}'
+                )
+            },
+        ):
+            with self.assertRaisesRegex(ConfigError, "contract version"):
+                _orchestration_metadata()
+
+        for unsupported in (True, 1.0):
+            with (
+                self.subTest(unsupported=unsupported),
+                mock.patch.dict(
+                    os.environ,
+                    {
+                        "MINER_TEST_ORCHESTRATION_METADATA": json.dumps(
+                            {"contract_version": unsupported}
+                        )
+                    },
+                ),
+                self.assertRaisesRegex(ConfigError, "contract version"),
+            ):
+                _orchestration_metadata()
+
     def test_verifies_orchestrated_testcode_before_execution(self) -> None:
         resolved = ResolvedTestCode(
             root=Path("/tmp/testcode"),
             record=TestCodeRecord(
-                repository="owner/miner-testcode",
+                repository="owner/mining-qa-testcode",
                 commit_sha="a" * 40,
-                url="https://github.com/owner/miner-testcode",
+                url="https://github.com/owner/mining-qa-testcode",
             ),
         )
         expected = {
             "testcode": {
-                "repository": "owner/miner-testcode",
+                "repository": "owner/mining-qa-testcode",
                 "commit_sha": "a" * 40,
             }
         }
@@ -46,7 +73,7 @@ class ConfigTest(unittest.TestCase):
             _verify_orchestrated_testcode(
                 {
                     "testcode": {
-                        "repository": "other/miner-testcode",
+                        "repository": "other/mining-qa-testcode",
                         "commit_sha": "a" * 40,
                     }
                 },
@@ -56,7 +83,7 @@ class ConfigTest(unittest.TestCase):
             _verify_orchestrated_testcode(
                 {
                     "testcode": {
-                        "repository": "owner/miner-testcode",
+                        "repository": "owner/mining-qa-testcode",
                         "commit_sha": "b" * 40,
                     }
                 },
@@ -67,9 +94,9 @@ class ConfigTest(unittest.TestCase):
         resolved = ResolvedTestCode(
             root=Path("/tmp/testcode"),
             record=TestCodeRecord(
-                repository="owner/miner-testcode",
+                repository="owner/mining-qa-testcode",
                 commit_sha="a" * 40,
-                url="https://github.com/owner/miner-testcode",
+                url="https://github.com/owner/mining-qa-testcode",
             ),
         )
         project = mock.Mock()
@@ -81,7 +108,7 @@ class ConfigTest(unittest.TestCase):
         project.publisher_settings.return_value = {"enabled": False}
         mismatch = {
             "testcode": {
-                "repository": "owner/miner-testcode",
+                "repository": "owner/mining-qa-testcode",
                 "commit_sha": "b" * 40,
             }
         }

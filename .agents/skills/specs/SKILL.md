@@ -1,6 +1,6 @@
 ---
 name: specs
-description: Create, update, reconcile, and review durable miner-testcode specifications under specs/. Use for new features; observable behavior changes; APIs, protocols, files, payloads, schemas, migrations, hardware interfaces, or architectural changes; security-, safety-, performance-, resource-, recovery-, or compatibility-relevant work; implementation from an existing spec; PRs missing documentation; project overview or story-map refreshes; and product or architecture reviews.
+description: Create, update, reconcile, and review durable mining-qa-testcode specifications under specs/. Use for new features; observable behavior changes; APIs, protocols, files, payloads, schemas, migrations, hardware interfaces, or architectural changes; security-, safety-, performance-, resource-, recovery-, or compatibility-relevant work; implementation from an existing spec; PRs missing documentation; project overview or story-map refreshes; and product or architecture reviews.
 ---
 
 # Project specifications
@@ -27,10 +27,10 @@ Include symbols, paths, protocols, commands, hardware components, or external
 systems only when they clarify a durable contract, constraint, ownership
 boundary, risk, or verification method.
 
-Preserve the project boundary: `miner-test` owns detailed child execution and
-publication; `miner-orchestrator` owns authorized gate aggregation and child
-links. Never document or implement a transfer of private lab control to Mining
-QA Status without an explicit architecture decision.
+Preserve the repository boundary: `miner-test` owns detailed child execution
+and publication; external `mining-qa-lab` owns authorized gate aggregation and
+child links. Coordinate changes to `contracts/orchestration-v1.md` with the lab.
+Never transfer private lab control to Mining QA Status.
 
 ## Select the workflow
 

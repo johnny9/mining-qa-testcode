@@ -29,11 +29,11 @@ class RedactionTest(unittest.TestCase):
         self.assertIn("<redacted", redacted)
 
     def test_rewrites_repository_paths_and_removes_other_local_paths(self) -> None:
-        project = Path("/home/alice/work/miner-testcode")
+        project = Path("/home/alice/work/mining-qa-testcode")
         artifacts = project / "artifacts/run-1"
         value = (
-            'File "/home/alice/work/miner-testcode/tests/e2e/test_smoke.py", line 12\n'
-            "artifacts=/home/alice/work/miner-testcode/artifacts/run-1/runner.log\n"
+            'File "/home/alice/work/mining-qa-testcode/tests/e2e/test_smoke.py", line 12\n'
+            "artifacts=/home/alice/work/mining-qa-testcode/artifacts/run-1/runner.log\n"
             "serial=/dev/serial/by-id/private-device"
         )
         redacted = redact_text(

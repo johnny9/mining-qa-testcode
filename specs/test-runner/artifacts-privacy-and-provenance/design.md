@@ -101,8 +101,9 @@ sample or roll up rather than grow without limit.
 | [Result model and publishing](../result-model-and-publishing/SPEC.md) | Publishes only sanitized evidence and provenance. |
 | [State, telemetry, and charting](../state-telemetry-and-charting/SPEC.md) | Produces structured evidence requiring bounds and privacy. |
 | [Transport interfaces](../transport-interfaces/SPEC.md) | Emits privacy-safe traces. |
-| [Assignment execution](../../lab-orchestrator/assignment-execution/SPEC.md) | Supplies expected source/run metadata and consumes the result pointer. |
-| [Testcode bootstrap](../../lab-orchestrator/testcode-bootstrap/SPEC.md) | Supplies exact expected testcode repository/SHA for independent verification. |
+| [Orchestration contract v1](../../../contracts/orchestration-v1.md) | Defines expected source/run metadata and the result pointer. |
+| [Lab assignment execution](https://github.com/johnny9/mining-qa-lab/blob/main/specs/lab-orchestrator/assignment-execution/SPEC.md) | Supplies expected metadata and consumes the result pointer. |
+| [Lab testcode bootstrap](https://github.com/johnny9/mining-qa-lab/blob/main/specs/lab-orchestrator/testcode-bootstrap/SPEC.md) | Supplies exact expected testcode repository/SHA for independent verification. |
 
 ## Verification approach
 

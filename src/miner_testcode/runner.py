@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import sys
+import tempfile
 import time
 import unittest
 from dataclasses import dataclass
@@ -23,6 +24,8 @@ from .testcase import MinerTestCase, TestContext
 
 
 _MAX_ORCHESTRATION_METADATA_BYTES = 64 * 1024
+_MAX_RESULT_POINTER_BYTES = 64 * 1024
+ORCHESTRATION_CONTRACT_VERSION = 1
 
 
 def _orchestration_metadata() -> dict[str, object] | None:
@@ -37,6 +40,16 @@ def _orchestration_metadata() -> dict[str, object] | None:
         raise ConfigError("MINER_TEST_ORCHESTRATION_METADATA must be JSON") from exc
     if not isinstance(value, dict):
         raise ConfigError("MINER_TEST_ORCHESTRATION_METADATA must be a JSON object")
+    version = value.get("contract_version", ORCHESTRATION_CONTRACT_VERSION)
+    if (
+        isinstance(version, bool)
+        or not isinstance(version, int)
+        or version != ORCHESTRATION_CONTRACT_VERSION
+    ):
+        raise ConfigError(
+            "unsupported orchestration contract version: "
+            f"{version!r}; expected {ORCHESTRATION_CONTRACT_VERSION}"
+        )
     return value
 
 
@@ -69,6 +82,54 @@ def _verify_orchestrated_testcode(
 class RunOutcome:
     successful: bool
     summary: RunSummary
+
+
+def _result_pointer_payload(
+    summary: RunSummary, *, successful: bool
+) -> dict[str, object]:
+    return {
+        "contract_version": ORCHESTRATION_CONTRACT_VERSION,
+        "successful": successful,
+        "status": summary.status,
+        "run_id": summary.run_id,
+        "artifact_root": str(summary.artifact_root),
+        "publishers": [
+            {
+                "name": item.name,
+                "success": item.success,
+                "required": item.required,
+                "url": item.url,
+                "detail": item.detail,
+            }
+            for item in summary.publishers
+        ],
+    }
+
+
+def _write_result_pointer(path: Path, payload: Mapping[str, object]) -> None:
+    serialized = json.dumps(payload, indent=2, sort_keys=True) + "\n"
+    if len(serialized.encode("utf-8")) > _MAX_RESULT_POINTER_BYTES:
+        raise ConfigError("result pointer exceeds 64 KiB")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            prefix=f".{path.name}.",
+            suffix=".tmp",
+            dir=path.parent,
+            delete=False,
+        ) as handle:
+            temporary = Path(handle.name)
+            handle.write(serialized)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, path)
+        temporary = None
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
 
 
 def _iter_tests(suite: unittest.TestSuite) -> Iterator[unittest.TestCase]:
@@ -455,30 +516,9 @@ def execute(argv: list[str] | None = None) -> RunOutcome:
     pointer = os.environ.get("MINER_TEST_RESULT_POINTER", "").strip()
     if pointer:
         pointer_path = Path(pointer).expanduser().resolve()
-        pointer_path.parent.mkdir(parents=True, exist_ok=True)
-        pointer_path.write_text(
-            json.dumps(
-                {
-                    "successful": successful,
-                    "status": summary.status,
-                    "run_id": summary.run_id,
-                    "artifact_root": str(summary.artifact_root),
-                    "publishers": [
-                        {
-                            "name": item.name,
-                            "success": item.success,
-                            "required": item.required,
-                            "url": item.url,
-                            "detail": item.detail,
-                        }
-                        for item in summary.publishers
-                    ],
-                },
-                indent=2,
-                sort_keys=True,
-            )
-            + "\n",
-            encoding="utf-8",
+        _write_result_pointer(
+            pointer_path,
+            _result_pointer_payload(summary, successful=successful),
         )
     return RunOutcome(successful=successful, summary=summary)
 

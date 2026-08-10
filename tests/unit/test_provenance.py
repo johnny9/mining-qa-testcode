@@ -32,18 +32,18 @@ class TestCodeProvenanceTest(unittest.TestCase):
             source.write_text("def test_smoke():\n    pass\n", encoding="utf-8")
             git(root, "add", "--", "tests/e2e/test_smoke.py")
             git(root, "commit", "-m", "Add test")
-            git(root, "remote", "add", "origin", "git@github.com:owner/miner-testcode.git")
+            git(root, "remote", "add", "origin", "git@github.com:owner/mining-qa-testcode.git")
             git(root, "update-ref", "refs/remotes/origin/main", "HEAD")
 
             resolved = resolve_test_code(root, require_published=True)
             url = resolved.file_url(source, 1)
 
-            self.assertEqual(resolved.record.repository, "owner/miner-testcode")
+            self.assertEqual(resolved.record.repository, "owner/mining-qa-testcode")
             self.assertTrue(resolved.record.published)
             self.assertFalse(resolved.record.dirty)
             self.assertEqual(
                 url,
-                f"https://github.com/owner/miner-testcode/blob/"
+                f"https://github.com/owner/mining-qa-testcode/blob/"
                 f"{resolved.record.commit_sha}/tests/e2e/test_smoke.py#L1",
             )
 

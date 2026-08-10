@@ -418,7 +418,7 @@ class LocalHtmlPublisher:
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>miner-testcode {html.escape(summary.run_id)}</title>
+<title>mining-qa-testcode {html.escape(summary.run_id)}</title>
 <style>
 :root {{ color-scheme: light dark; font-family: system-ui, sans-serif; }}
 body {{ max-width: 1440px; margin: 2rem auto; padding: 0 1rem; }}
@@ -450,7 +450,7 @@ pre {{ max-width: 75vw; overflow: auto; white-space: pre-wrap; }}
 </style>
 </head>
 <body>
-<h1>miner-testcode result</h1>
+<h1>mining-qa-testcode result</h1>
 <p class="muted">Run {html.escape(summary.run_id)} · {iso_timestamp(summary.started_at)} · {summary.duration_seconds:.3f}s</p>
 {test_code}
 <div class="cards">
@@ -533,7 +533,7 @@ class GithubCheckPublisher:
             "error": "failure",
             "skipped": "skipped",
         }[summary.status]
-        check_name = str(self.config.get("name", "miner-testcode / hardware-e2e"))
+        check_name = str(self.config.get("name", "mining-qa-testcode / hardware-e2e"))
         text = self._markdown(summary)
         payload: dict[str, Any] = {
             "name": check_name,
@@ -729,7 +729,7 @@ class MiningQaStatusPublisher:
             "branch": branch,
             "status": summary.status,
             "source": source,
-            "suite": str(self.config.get("suite", "miner-testcode"))[:128],
+            "suite": str(self.config.get("suite", "mining-qa-testcode"))[:128],
             "title": str(
                 self.config.get("title", f"{target_name} end-to-end qualification")
             )[:240],

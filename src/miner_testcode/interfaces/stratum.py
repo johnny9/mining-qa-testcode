@@ -33,7 +33,7 @@ class StratumV1Probe:
         *,
         password: str = "x",
         tls: bool = False,
-        user_agent: str = "miner-testcode/0.1.0",
+        user_agent: str = "mining-qa-testcode/0.1.0",
     ) -> None:
         self.host = host
         self.port = port
