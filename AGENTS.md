@@ -40,7 +40,9 @@ updates in `mining-qa-lab`; do not silently change only one consumer.
 
 ## Source-of-truth order
 
-- `README.md`: installation and operator orientation.
+- `README.md`: short project introduction and quick start.
+- `docs/*.md`: plain-language user manuals. Keep internal behavior, safety
+  contracts, and agent instructions in specs or this file.
 - `contracts/`: external lab/runner protocol versions.
 - `specs/OVERVIEW.md`: purpose and ownership boundary.
 - `specs/INDEX.md`: complete test-runner feature directory.
