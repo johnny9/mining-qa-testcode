@@ -107,6 +107,7 @@
 | [Device capability contract](../device-capability-contract/SPEC.md) | Device type selects an adapter; capabilities select behavior. |
 | [Result model and publishing](../result-model-and-publishing/SPEC.md) | Publisher tables and public labels shape output destinations. |
 | [Lab assignment execution](https://github.com/johnny9/mining-qa-lab/blob/main/specs/lab-orchestrator/assignment-execution/SPEC.md) | External lab uses only contract-v1 CLI/environment overrides. |
+| [Orchestration v2](../orchestration-v2/SPEC.md) | Adds strict distributed metadata and cross-field validation before this slice allocates devices or artifacts. |
 
 ## Verification approach
 

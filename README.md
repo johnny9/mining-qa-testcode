@@ -89,8 +89,10 @@ result pointer and keeps a verified local artifact copy.
   local Stratum V1 regressions.
 - [Publishing guide](docs/PUBLISHING.md): configure local, GitHub, and Mining QA
   Status results.
-- [Orchestration contract](contracts/orchestration-v1.md): interface used by
-  `mining-qa-lab`.
+- [Orchestration v1](contracts/orchestration-v1.md) and
+  [v2](contracts/orchestration-v2.md): interfaces used by `mining-qa-lab`.
+- [Mock device v1](contracts/mock-device-v1.md): loopback-only no-hardware
+  component and integration boundary.
 - [Specifications](specs/README.md): implementation behavior and feature
   contracts.
 - [Agent instructions](AGENTS.md): repository rules for automated contributors.

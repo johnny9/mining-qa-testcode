@@ -110,6 +110,8 @@ sample or roll up rather than grow without limit.
 | [Orchestration contract v1](../../../contracts/orchestration-v1.md) | Defines expected source/run metadata and the result pointer. |
 | [Lab assignment execution](https://github.com/johnny9/mining-qa-lab/blob/main/specs/lab-orchestrator/assignment-execution/SPEC.md) | Supplies expected metadata and consumes the result pointer. |
 | [Lab testcode bootstrap](https://github.com/johnny9/mining-qa-lab/blob/main/specs/lab-orchestrator/testcode-bootstrap/SPEC.md) | Supplies exact expected testcode repository/SHA for independent verification. |
+| [Orchestration v2](../orchestration-v2/SPEC.md) | Adds an allowlisted public correlation section and keeps private pointer identity separate. |
+| [Mock-device integration](../mock-device-integration/SPEC.md) | Supplies synthetic canaries and distinct raw/sanitized log failure paths. |
 
 ## Verification approach
 

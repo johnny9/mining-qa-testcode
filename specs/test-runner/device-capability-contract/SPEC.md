@@ -13,5 +13,7 @@ APIs, identity, lifecycle, and telemetry.
 
 ## Changelog
 
+- 2026-08-14: Linked the proposed mock-device process that exercises the real
+  Gamma adapter rather than adding a production mock adapter.
 - 2026-08-10: Reconciled the abstract lifecycle, capability registry, factory,
   and normalized state extension requirements.

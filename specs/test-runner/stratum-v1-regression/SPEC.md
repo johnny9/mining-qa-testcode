@@ -13,5 +13,7 @@ Stratum V1 server, including valid work, rejected work, and bounded failures.
 
 ## Changelog
 
+- 2026-08-14: Linked the proposed mock miner client that completes the
+  device-to-fake-pool path for no-hardware integration.
 - 2026-08-10: Defined class-scoped fake-pool lifecycle, ordered scenarios,
   protocol evidence, privacy rules, and hardware acceptance boundary.

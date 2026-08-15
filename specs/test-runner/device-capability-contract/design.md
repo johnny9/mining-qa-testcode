@@ -99,6 +99,7 @@
 | [Lifecycle and cleanup](../lifecycle-and-cleanup/SPEC.md) | Defines required failure-safe lifecycle semantics. |
 | [ESP-Miner device adapters](../esp-miner-device-adapters/SPEC.md) | Current concrete implementations. |
 | [State, telemetry, and charting](../state-telemetry-and-charting/SPEC.md) | Defines portable observation contracts. |
+| [Mock-device integration](../mock-device-integration/SPEC.md) | Validates this contract over loopback through the existing Gamma adapter. |
 
 ## Verification approach
 

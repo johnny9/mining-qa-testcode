@@ -7,7 +7,8 @@ tests, detailed evidence, privacy, provenance, and child-result publication.
 
 The related [`mining-qa-lab`](https://github.com/johnny9/mining-qa-lab)
 repository schedules authorized work and consumes only the versioned process
-contract in [contracts/orchestration-v1.md](contracts/orchestration-v1.md).
+contracts in [contracts/orchestration-v1.md](contracts/orchestration-v1.md) and
+[contracts/orchestration-v2.md](contracts/orchestration-v2.md).
 Testcode must not acquire lab scheduling, durable lease, aggregate gate, or
 orchestrator deployment responsibilities.
 

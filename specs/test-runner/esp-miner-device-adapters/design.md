@@ -102,6 +102,7 @@
 | [Lifecycle and cleanup](../lifecycle-and-cleanup/SPEC.md) | Defines pool/pause restore guarantees. |
 | [Firmware lifecycle](../firmware-lifecycle/SPEC.md) | Defines configured AxeOS upgrade semantics. |
 | [State, telemetry, and charting](../state-telemetry-and-charting/SPEC.md) | Defines normalized observation semantics. |
+| [Mock-device integration](../mock-device-integration/SPEC.md) | Emulates the bounded Gamma-native subset for deterministic component/system tests. |
 
 ## Verification approach
 

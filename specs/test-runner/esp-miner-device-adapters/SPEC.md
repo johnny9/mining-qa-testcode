@@ -13,5 +13,7 @@ lifecycle, pool, firmware, state, and telemetry contracts.
 
 ## Changelog
 
+- 2026-08-14: Linked the proposed versioned Gamma mock API used only for
+  no-hardware integration through the real adapter.
 - 2026-08-10: Reconciled model identity, shared adapter behavior, multi-pool
   cleanup, standard Gamma telemetry, and redacted-identity rejection.

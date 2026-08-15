@@ -103,6 +103,7 @@
 | [ESP-Miner device adapters](../esp-miner-device-adapters/SPEC.md) | Provides current native pool and pause implementation. |
 | [Firmware lifecycle](../firmware-lifecycle/SPEC.md) | Firmware becomes the run target before mutable baseline capture. |
 | [Artifacts, privacy, and provenance](../artifacts-privacy-and-provenance/SPEC.md) | Sanitized baseline is evidence only. |
+| [Mock-device integration](../mock-device-integration/SPEC.md) | Exercises pass, mutation, restart, rejection, mismatch, and cleanup errors over a real adapter boundary. |
 
 ## Verification approach
 

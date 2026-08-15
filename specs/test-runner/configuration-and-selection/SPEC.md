@@ -13,6 +13,8 @@ and publishers without exposing resolved secrets.
 
 ## Changelog
 
+- 2026-08-14: Linked strict proposed orchestration-v2 pre-device validation
+  without changing current direct/v1 behavior.
 - 2026-08-10: Moved lab ownership to the external `mining-qa-lab` repository
   and bound orchestration metadata to contract v1.
 - 2026-08-10: Reconciled TOML, CLI, environment, device, pattern, and PR

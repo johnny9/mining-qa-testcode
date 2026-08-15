@@ -13,6 +13,13 @@ lab: [`mining-qa-lab`](https://github.com/johnny9/mining-qa-lab) invokes
 [`mining-qa-status`](https://github.com/johnny9/mining-qa-status) stores and
 presents results.
 
+The proposed distributed path adds strict
+[orchestration v2](test-runner/orchestration-v2/SPEC.md) correlation while
+preserving the same Lab/runner ownership boundary. A Testcode-owned
+[mock-device integration](test-runner/mock-device-integration/SPEC.md) lets the
+Status-owned system harness exercise the real adapter/lifecycle without a
+physical miner; simulation is never HIL evidence.
+
 ## Users and dependent systems
 
 - Firmware developers and reviewers needing exact-source hardware evidence.
@@ -31,6 +38,8 @@ presents results.
 - Local, GitHub Check, and Mining QA Status child-result publication.
 - Bounded hash manifests for redundant private archival by the lab.
 - Independent verification of orchestrator-supplied testcode repository/SHA.
+- Proposed strict distributed correlation and deterministic loopback mock-device
+  process for full local integration.
 
 ## Project boundary
 
@@ -66,6 +75,8 @@ flowchart LR
     T -->|"HTTP / WebSocket / serial / Stratum"| D["Mining device"]
     T -->|"detailed child result + artifacts"| Q["mining-qa-status"]
     T -->|"bounded result pointer and artifact manifest"| L
+    L -->|"contract v2 distributed correlation"| T
+    T -->|"real adapter over loopback"| M["mock Gamma + fake Stratum"]
 ```
 
 ## Cross-project contract
@@ -78,6 +89,12 @@ and the lab does not import runner modules.
 
 Additive v1 fields are compatible. Meaning/type removal or changes require a
 new version with coordinated support in both repositories.
+
+[Contract v2](../contracts/orchestration-v2.md) keeps global gate, Lab
+execution, private local run, assignment, attempt, and runner identities
+distinct and publishes only the allowlisted public subset. Version-2 readers
+ship in Testcode and Lab before the Lab writer is enabled; version 1 remains
+available through its compatibility window.
 
 ## Cross-cutting constraints
 
@@ -99,6 +116,8 @@ new version with coordinated support in both repositories.
 
 ## Changelog
 
+- 2026-08-14: Added proposed orchestration v2 and a Testcode-owned loopback mock
+  device for Status-owned three-project integration.
 - 2026-08-10: Split the runner into `mining-qa-testcode`, made
   `mining-qa-lab` an external restricted owner, and established contract v1.
 - 2026-08-10: Established the original runner/lab ownership boundary and child

@@ -13,5 +13,7 @@ is allowed to change.
 
 ## Changelog
 
+- 2026-08-14: Linked deterministic mock-device cleanup/error scenarios for
+  no-hardware component and system integration.
 - 2026-08-10: Added the fail-closed redaction-marker baseline/write contract
   and reconciled lifecycle ordering and cleanup error semantics.

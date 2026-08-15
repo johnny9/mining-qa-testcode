@@ -16,6 +16,8 @@ slices, not source-directory mirrors.
 | `test-runner` | Stratum V1 regression | supported | [SPEC.md](test-runner/stratum-v1-regression/SPEC.md) | Exercise deterministic miner-client protocol behavior against a local fake pool. |
 | `test-runner` | Artifacts, privacy, and provenance | supported | [SPEC.md](test-runner/artifacts-privacy-and-provenance/SPEC.md) | Preserve useful evidence without leaking identities, secrets, or local coordinates. |
 | `test-runner` | Result model and publishing | supported | [SPEC.md](test-runner/result-model-and-publishing/SPEC.md) | Aggregate native unittest outcomes and publish local or remote child results. |
+| `test-runner` | Orchestration v2 | proposed | [SPEC.md](test-runner/orchestration-v2/SPEC.md) | Carry strict distributed correlation through the private pointer and sanitized child result. |
+| `test-runner` | Mock-device integration | proposed | [SPEC.md](test-runner/mock-device-integration/SPEC.md) | Exercise the real Gamma lifecycle and fake Stratum path without physical hardware. |
 
 Allowed lifecycle values: `proposed`, `implementing`, `supported`, `deprecated`,
 and `retired`.

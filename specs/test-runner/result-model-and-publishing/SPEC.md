@@ -13,6 +13,8 @@ or remote child records with explicit required-versus-best-effort semantics.
 
 ## Changelog
 
+- 2026-08-14: Linked the proposed strict v2 pointer, required manifest, public
+  correlation section, and sanitized-log boundary.
 - 2026-08-10: Added the optional contract-v1 artifact-manifest descriptor while
   retaining required Mining QA child publication semantics.
 - 2026-08-10: Versioned the external lab process/result-pointer contract as v1

@@ -43,3 +43,8 @@ feature directory.
 
 - The external lab can invoke a pinned runner and consume a bounded pointer →
   [Orchestration contract v1](../contracts/orchestration-v1.md)
+- A distributed Lab execution can preserve strict public/private correlation →
+  [Orchestration v2](test-runner/orchestration-v2/SPEC.md)
+- The full local stack can exercise the real adapter and lifecycle without a
+  physical miner →
+  [Mock-device integration](test-runner/mock-device-integration/SPEC.md)

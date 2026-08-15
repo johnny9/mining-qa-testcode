@@ -99,6 +99,7 @@ service. Connections, queues, transcript size, and waits remain bounded.
 | [Lifecycle and cleanup](../lifecycle-and-cleanup/SPEC.md) | Owns temporary pool restoration. |
 | [Artifacts, privacy, and provenance](../artifacts-privacy-and-provenance/SPEC.md) | Sanitizes the protocol transcript. |
 | [Public pool smoke](../public-pool-smoke/SPEC.md) | Provides complementary external interoperability evidence. |
+| [Mock-device integration](../mock-device-integration/SPEC.md) | Supplies a simulated miner client so the existing fake server can run in full local integration. |
 
 ## Verification approach
 
