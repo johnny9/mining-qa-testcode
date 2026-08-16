@@ -36,6 +36,7 @@ class PublisherRecord:
     name: str
     success: bool
     required: bool
+    result_id: str | None = None
     url: str | None = None
     detail: str | None = None
 

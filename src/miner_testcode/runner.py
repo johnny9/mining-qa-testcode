@@ -19,71 +19,22 @@ from typing import Iterator, Mapping
 from .artifacts import RunArtifacts
 from .config import ConfigError, DeviceConfig, ProjectConfig, load_config
 from .publishers import PublisherManager
+from .orchestration import (
+    OrchestrationMetadata,
+    load_orchestration_metadata,
+    verify_orchestrated_testcode,
+)
 from .provenance import ResolvedTestCode, resolve_test_code
 from .redaction import PrivacyFormatter, redact_text, sanitize_artifacts
 from .results import RunSummary, TestRecord
 from .testcase import MinerTestCase, TestContext
 
 
-_MAX_ORCHESTRATION_METADATA_BYTES = 64 * 1024
 _MAX_RESULT_POINTER_BYTES = 64 * 1024
 _MAX_ARTIFACT_MANIFEST_BYTES = 256 * 1024
 _MAX_ARCHIVE_ARTIFACTS = 512
 _MAX_ARCHIVE_ARTIFACT_BYTES = 50 * 1024 * 1024
 _MAX_ARCHIVE_TOTAL_BYTES = 512 * 1024 * 1024
-ORCHESTRATION_CONTRACT_VERSION = 1
-
-
-def _orchestration_metadata() -> dict[str, object] | None:
-    raw = os.environ.get("MINER_TEST_ORCHESTRATION_METADATA", "").strip()
-    if not raw:
-        return None
-    if len(raw.encode("utf-8")) > _MAX_ORCHESTRATION_METADATA_BYTES:
-        raise ConfigError("orchestration metadata exceeds 64 KiB")
-    try:
-        value = json.loads(raw)
-    except json.JSONDecodeError as exc:
-        raise ConfigError("MINER_TEST_ORCHESTRATION_METADATA must be JSON") from exc
-    if not isinstance(value, dict):
-        raise ConfigError("MINER_TEST_ORCHESTRATION_METADATA must be a JSON object")
-    version = value.get("contract_version", ORCHESTRATION_CONTRACT_VERSION)
-    if (
-        isinstance(version, bool)
-        or not isinstance(version, int)
-        or version != ORCHESTRATION_CONTRACT_VERSION
-    ):
-        raise ConfigError(
-            "unsupported orchestration contract version: "
-            f"{version!r}; expected {ORCHESTRATION_CONTRACT_VERSION}"
-        )
-    return value
-
-
-def _verify_orchestrated_testcode(
-    metadata: Mapping[str, object] | None,
-    test_code: ResolvedTestCode,
-) -> None:
-    if metadata is None or "testcode" not in metadata:
-        return
-    expected = metadata["testcode"]
-    if not isinstance(expected, dict):
-        raise ConfigError("orchestration testcode metadata must be an object")
-    repository = expected.get("repository")
-    commit_sha = expected.get("commit_sha")
-    if not isinstance(repository, str) or not isinstance(commit_sha, str):
-        raise ConfigError(
-            "orchestration testcode metadata requires repository and commit_sha"
-        )
-    if repository != test_code.record.repository:
-        raise ConfigError(
-            "installed testcode repository does not match orchestration metadata"
-        )
-    if commit_sha.lower() != test_code.record.commit_sha.lower():
-        raise ConfigError(
-            "installed testcode commit does not match orchestration metadata"
-        )
-
-
 @dataclass(frozen=True, slots=True)
 class RunOutcome:
     successful: bool
@@ -174,10 +125,11 @@ def _result_pointer_payload(
     summary: RunSummary,
     *,
     successful: bool,
+    orchestration: OrchestrationMetadata | None = None,
     artifact_manifest: Mapping[str, object] | None = None,
 ) -> dict[str, object]:
     payload: dict[str, object] = {
-        "contract_version": ORCHESTRATION_CONTRACT_VERSION,
+        "contract_version": orchestration.contract_version if orchestration else 1,
         "successful": successful,
         "status": summary.status,
         "run_id": summary.run_id,
@@ -187,6 +139,7 @@ def _result_pointer_payload(
                 "name": item.name,
                 "success": item.success,
                 "required": item.required,
+                "result_id": item.result_id,
                 "url": item.url,
                 "detail": item.detail,
             }
@@ -195,6 +148,8 @@ def _result_pointer_payload(
     }
     if artifact_manifest is not None:
         payload["artifact_manifest"] = dict(artifact_manifest)
+    if orchestration is not None and orchestration.is_v2:
+        payload["correlation"] = orchestration.private_correlation()
     return payload
 
 
@@ -430,6 +385,7 @@ def _configure_logging(
     artifacts: RunArtifacts,
     devices: tuple[DeviceConfig, ...],
     project_root: Path,
+    replacements: Mapping[str, str],
 ) -> None:
     level = getattr(logging, project.runner.log_level, None)
     if not isinstance(level, int):
@@ -440,7 +396,7 @@ def _configure_logging(
         "%(asctime)s %(levelname)s %(name)s: %(message)s",
         project_root=project_root,
         artifact_root=artifacts.path,
-        replacements={device.name: device.publication_name for device in devices},
+        replacements=replacements,
     )
     console = logging.StreamHandler(sys.stderr)
     console.setFormatter(formatter)
@@ -449,6 +405,29 @@ def _configure_logging(
     root.handlers.clear()
     root.addHandler(console)
     root.addHandler(file_handler)
+
+
+def _privacy_replacements(devices: tuple[DeviceConfig, ...]) -> dict[str, str]:
+    replacements = {
+        device.name: device.publication_name for device in devices
+    }
+    raw = os.environ.get("MINER_TEST_PRIVACY_CANARIES", "").strip()
+    if not raw:
+        return replacements
+    try:
+        values = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise ConfigError("MINER_TEST_PRIVACY_CANARIES must be a JSON array") from exc
+    if (
+        not isinstance(values, list)
+        or len(values) > 16
+        or any(not isinstance(item, str) or not 1 <= len(item) <= 200 for item in values)
+    ):
+        raise ConfigError(
+            "MINER_TEST_PRIVACY_CANARIES must contain at most 16 bounded strings"
+        )
+    replacements.update({item: "<redacted-canary>" for item in values})
+    return replacements
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -489,7 +468,7 @@ def build_parser() -> argparse.ArgumentParser:
 def execute(argv: list[str] | None = None) -> RunOutcome:
     args = build_parser().parse_args(argv)
     project = load_config(args.config)
-    orchestration = _orchestration_metadata()
+    orchestration = load_orchestration_metadata()
     invalid_cli_prs = [number for number in args.validation_pr if number <= 0]
     if invalid_cli_prs:
         raise ConfigError("--validation-pr must be a positive integer")
@@ -503,13 +482,26 @@ def execute(argv: list[str] | None = None) -> RunOutcome:
         bool(project.publisher_settings(name).get("enabled", False))
         for name in ("github", "mining_qa_status")
     )
-    test_code = resolve_test_code(
-        project.runner.tests_dir, require_published=remote_publication
+    integration_development = bool(
+        orchestration is not None
+        and orchestration.is_v2
+        and os.environ.get("MINING_QA_INTEGRATION_DEVELOPMENT") == "1"
     )
-    _verify_orchestrated_testcode(orchestration, test_code)
+    test_code = resolve_test_code(
+        project.runner.tests_dir,
+        require_published=remote_publication and not integration_development,
+    )
+    verify_orchestrated_testcode(orchestration, test_code)
+    privacy_replacements = _privacy_replacements(devices)
     artifacts = RunArtifacts.create(project.runner.artifacts_dir)
     started_at = time.time()
-    _configure_logging(project, artifacts, devices, test_code.root)
+    _configure_logging(
+        project,
+        artifacts,
+        devices,
+        test_code.root,
+        privacy_replacements,
+    )
     logger = logging.getLogger(__name__)
     publisher_manager = PublisherManager(project.publishers, logger=logger)
     logger.info("run artifacts: %s", artifacts.run_id)
@@ -588,14 +580,18 @@ def execute(argv: list[str] | None = None) -> RunOutcome:
         unexpected_successes=len(result.unexpectedSuccesses),
         successful=result.wasSuccessful(),
         test_code=test_code.record,
-        orchestration=orchestration,
+        orchestration=(
+            orchestration.public_section(artifacts.run_id)
+            if orchestration is not None
+            else None
+        ),
     )
     for handler in logging.getLogger().handlers:
         handler.flush()
     sanitize_artifacts(
         artifacts.path,
         project_root=test_code.root,
-        replacements={device.name: device.publication_name for device in devices},
+        replacements=privacy_replacements,
     )
     publishers_ok = publisher_manager.publish(summary)
     logger.info(
@@ -614,6 +610,7 @@ def execute(argv: list[str] | None = None) -> RunOutcome:
             _result_pointer_payload(
                 summary,
                 successful=successful,
+                orchestration=orchestration,
                 artifact_manifest=artifact_manifest,
             ),
         )

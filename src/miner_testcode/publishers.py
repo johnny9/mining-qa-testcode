@@ -671,6 +671,7 @@ class MiningQaStatusPublisher:
             name=self.name,
             success=True,
             required=required,
+            result_id=result_id,
             url=url,
             detail=f"result_id={result_id}",
         )

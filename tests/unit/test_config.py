@@ -9,14 +9,14 @@ from types import SimpleNamespace
 from unittest import mock
 
 from miner_testcode.config import ConfigError, load_config
+from miner_testcode.orchestration import (
+    OrchestrationMetadata,
+    load_orchestration_metadata,
+    verify_orchestrated_testcode,
+)
 from miner_testcode.provenance import ResolvedTestCode
 from miner_testcode.results import TestCodeRecord
-from miner_testcode.runner import (
-    _orchestration_metadata,
-    _verify_orchestrated_testcode,
-    build_parser,
-    execute,
-)
+from miner_testcode.runner import build_parser, execute
 
 
 class ConfigTest(unittest.TestCase):
@@ -25,7 +25,10 @@ class ConfigTest(unittest.TestCase):
             os.environ,
             {"MINER_TEST_ORCHESTRATION_METADATA": '{"gate_run_id":"run-1"}'},
         ):
-            self.assertEqual(_orchestration_metadata(), {"gate_run_id": "run-1"})
+            parsed = load_orchestration_metadata()
+            self.assertIsNotNone(parsed)
+            assert parsed is not None
+            self.assertEqual(dict(parsed.raw), {"gate_run_id": "run-1"})
 
         with mock.patch.dict(
             os.environ,
@@ -35,8 +38,8 @@ class ConfigTest(unittest.TestCase):
                 )
             },
         ):
-            with self.assertRaisesRegex(ConfigError, "contract version"):
-                _orchestration_metadata()
+            with self.assertRaisesRegex(ConfigError, "orchestration v2"):
+                load_orchestration_metadata()
 
         for unsupported in (True, 1.0):
             with (
@@ -51,7 +54,7 @@ class ConfigTest(unittest.TestCase):
                 ),
                 self.assertRaisesRegex(ConfigError, "contract version"),
             ):
-                _orchestration_metadata()
+                load_orchestration_metadata()
 
     def test_verifies_orchestrated_testcode_before_execution(self) -> None:
         resolved = ResolvedTestCode(
@@ -68,25 +71,26 @@ class ConfigTest(unittest.TestCase):
                 "commit_sha": "a" * 40,
             }
         }
-        _verify_orchestrated_testcode(expected, resolved)
+        parsed = OrchestrationMetadata(1, expected)
+        verify_orchestrated_testcode(parsed, resolved)
         with self.assertRaisesRegex(ConfigError, "repository does not match"):
-            _verify_orchestrated_testcode(
-                {
+            verify_orchestrated_testcode(
+                OrchestrationMetadata(1, {
                     "testcode": {
                         "repository": "other/mining-qa-testcode",
                         "commit_sha": "a" * 40,
                     }
-                },
+                }),
                 resolved,
             )
         with self.assertRaisesRegex(ConfigError, "commit does not match"):
-            _verify_orchestrated_testcode(
-                {
+            verify_orchestrated_testcode(
+                OrchestrationMetadata(1, {
                     "testcode": {
                         "repository": "owner/mining-qa-testcode",
                         "commit_sha": "b" * 40,
                     }
-                },
+                }),
                 resolved,
             )
 
@@ -115,8 +119,8 @@ class ConfigTest(unittest.TestCase):
         with (
             mock.patch("miner_testcode.runner.load_config", return_value=project),
             mock.patch(
-                "miner_testcode.runner._orchestration_metadata",
-                return_value=mismatch,
+                "miner_testcode.runner.load_orchestration_metadata",
+                return_value=OrchestrationMetadata(1, mismatch),
             ),
             mock.patch("miner_testcode.runner.resolve_test_code", return_value=resolved),
             mock.patch("miner_testcode.runner.RunArtifacts.create") as create_artifacts,
@@ -124,6 +128,49 @@ class ConfigTest(unittest.TestCase):
             with self.assertRaisesRegex(ConfigError, "commit does not match"):
                 execute([])
         create_artifacts.assert_not_called()
+
+    def test_v2_integration_development_defers_dirty_check_to_contract_verifier(self) -> None:
+        resolved = ResolvedTestCode(
+            root=Path("/tmp/testcode"),
+            record=TestCodeRecord(
+                repository="owner/mining-qa-testcode",
+                commit_sha="a" * 40,
+                url="https://github.com/owner/mining-qa-testcode",
+                dirty=True,
+            ),
+        )
+        project = mock.Mock()
+        project.runner = SimpleNamespace(
+            validation_prs=frozenset(),
+            tests_dir=Path("/tmp/testcode/tests"),
+        )
+        project.selected_devices.return_value = [mock.Mock()]
+        project.publisher_settings.return_value = {"enabled": True}
+        orchestration = mock.Mock(is_v2=True)
+        with (
+            mock.patch("miner_testcode.runner.load_config", return_value=project),
+            mock.patch(
+                "miner_testcode.runner.load_orchestration_metadata",
+                return_value=orchestration,
+            ),
+            mock.patch(
+                "miner_testcode.runner.resolve_test_code",
+                return_value=resolved,
+            ) as resolve,
+            mock.patch(
+                "miner_testcode.runner.verify_orchestrated_testcode",
+                side_effect=ConfigError("stop after provenance"),
+            ),
+            mock.patch.dict(
+                "os.environ", {"MINING_QA_INTEGRATION_DEVELOPMENT": "1"}
+            ),
+        ):
+            with self.assertRaisesRegex(ConfigError, "stop after provenance"):
+                execute([])
+        resolve.assert_called_once_with(
+            project.runner.tests_dir,
+            require_published=False,
+        )
 
     def test_cli_can_select_validation_prs(self) -> None:
         self.assertEqual(build_parser().parse_args([]).validation_pr, [])
