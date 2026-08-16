@@ -1,0 +1,45 @@
+[runner]
+artifacts_dir = "${MINING_QA_TEST_ARTIFACTS}"
+tests_dir = "."
+pattern = "test_integration_smoke.py"
+verbosity = 2
+cleanup_timeout = 10
+
+[publishers.local]
+enabled = true
+required = true
+filename = "report.html"
+json_filename = "result.json"
+
+[publishers.mining_qa_status]
+enabled = true
+required = true
+base_url_env = "MINING_QA_URL"
+token_env = "MINING_QA_TOKEN"
+repository_env = "GITHUB_REPOSITORY"
+commit_sha_env = "GITHUB_SHA"
+upload_artifacts = false
+timeout = 10
+
+[[devices]]
+name = "mock-gamma-private"
+type = "bitaxe_602"
+
+[devices.options]
+publication_name = "Gamma 602 simulation"
+read_only = false
+
+[devices.interfaces.api]
+base_url = "${MINING_QA_MOCK_URL}"
+timeout = 1
+retries = 1
+retry_backoff = 0.05
+poll_interval = 0.1
+online_timeout = 8
+log_max_bytes = 65536
+
+[devices.interfaces.websocket]
+enabled = false
+
+[tests.mock_device_integration]
+username = "integration-smoke.worker"
