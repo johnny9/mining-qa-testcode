@@ -4,7 +4,7 @@
 
 | Component | Responsibility | Implementation pointer |
 |---|---|---|
-| Metadata parser | Select contract version, validate strict v2 and environment equality | `src/miner_testcode/config.py` |
+| Metadata parser | Select contract version, validate strict v2 and environment equality | `src/miner_testcode/orchestration.py` |
 | Provenance guard | Verify executing Testcode repository/SHA before artifacts/devices | `src/miner_testcode/provenance.py` |
 | Runner | Freeze correlation, drive lifecycle, build manifest, and write matching pointer | `src/miner_testcode/runner.py` |
 | Result/publishers | Serialize allowlisted public v2 correlation and child identity | `src/miner_testcode/results.py` and `src/miner_testcode/publishers.py` |

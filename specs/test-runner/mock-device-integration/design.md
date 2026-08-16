@@ -4,7 +4,7 @@
 
 | Component | Responsibility | Implementation pointer |
 |---|---|---|
-| Mock process | Serve loopback AxeOS/control APIs, simulated miner client, state, and events | planned Testcode mock-device module |
+| Mock process | Serve loopback AxeOS/control APIs, simulated miner client, state, and events | `src/miner_testcode/mock_device.py` |
 | Real Gamma adapter | Consume the native device API and own lifecycle/cleanup | `src/miner_testcode/devices/bitaxe.py` |
 | Fake Stratum server | Supply deterministic jobs/responses and protocol transcript | `src/miner_testcode/interfaces/fake_stratum.py` |
 | Runner lifecycle | Select real adapter, capture result/artifacts, and enforce cleanup | `src/miner_testcode/runner.py` and `src/miner_testcode/testcase.py` |
@@ -13,7 +13,7 @@
 
 ### CLI
 
-- Target executable and exit semantics follow
+- The executable and exit semantics follow
   [mock device v1](../../../contracts/mock-device-v1.md).
 - Normal `miner-test` CLI uses a generated private profile with type
   `bitaxe_602`; it does not select a special mock adapter.
