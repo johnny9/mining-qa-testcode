@@ -13,7 +13,7 @@
   correlation and includes a required verified artifact manifest.
 - [x] **TR-ORCH-V2-AC-04:** Detailed child publication contains the exact
   allowlisted public orchestration section and immutable child identity/link.
-- [ ] **TR-ORCH-V2-AC-05:** Pass, fail, error, skip, cleanup failure, publisher
+- [x] **TR-ORCH-V2-AC-05:** Pass, fail, error, skip, cleanup failure, publisher
   failure, pointer failure, and manifest failure retain existing truth and exit
   semantics.
 
@@ -32,7 +32,7 @@
 - [x] **TR-ORCH-V2-AC-09:** Canary tests prove no private local run, device/
   setup/profile identity, coordinate, path, credential, pool/payout identity,
   environment content, or raw log enters a public payload.
-- [ ] **TR-ORCH-V2-AC-10:** Post-run sanitized log publication is distinct,
+- [x] **TR-ORCH-V2-AC-10:** Post-run sanitized log publication is distinct,
   bounded, digest-addressed, independently scanned, and never falls back to raw
   capture.
 - [x] **TR-ORCH-V2-AC-11:** The two-Lab local integration suite produces
@@ -41,16 +41,17 @@
 
 ## Verification evidence
 
-- `PYTHONPATH=src python3 -m unittest discover -s tests/unit -v` passed all 70
-  unit/spec tests on 2026-08-16, including strict metadata/environment,
+- `PYTHONPATH=src python3 -m unittest discover -s tests/unit -v` passed all 81
+  tests on 2026-08-16, including strict metadata/environment,
   dirty-development opt-in, provenance, atomic pointer, manifest, publisher,
-  and redaction regressions.
+  redaction, complete normalized outcome, and raw/sanitized-log regressions.
 - The Status-owned nine-scenario development simulation published and verified
   distinct real child results for both Labs, including failed and cleanup-error
   outcomes without real hardware or external publication.
-- AC-05 and AC-10 remain unchecked until the complete outcome/failure matrix
-  and distinct digest-addressed sanitized-log publication have current direct
-  evidence.
+- `tests.unit.test_runner` proves pass/fail/error/skip plus cleanup, required
+  publisher, pointer, and manifest failure truth. `tests.unit.test_sanitized_log`
+  proves bounded private raw retention, second-scan failure closure, and a
+  SHA-256-addressed public log/descriptor with no raw fallback.
 
 ## Acceptance rule
 

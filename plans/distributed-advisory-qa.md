@@ -1,8 +1,8 @@
 # Distributed advisory QA — test runner delivery plan
 
-Status: proposed proof of concept and migration plan
+Status: implemented proof-of-concept delivery record; durable specs are authoritative
 
-Updated: 2026-08-14
+Updated: 2026-08-16
 
 Related plans:
 
@@ -15,6 +15,10 @@ Durable contracts and acceptance now live in:
 - [Mock-device integration](../specs/test-runner/mock-device-integration/SPEC.md)
 - [Lab/Testcode orchestration v2](../contracts/orchestration-v2.md)
 - [Mock device v1](../contracts/mock-device-v1.md)
+
+This file records the original delivery sequence and its reconciliation. The
+linked feature specs and versioned contracts are normative; simulation results
+remain explicitly separate from HIL or firmware qualification.
 
 ## Goal
 
@@ -55,8 +59,9 @@ constructing any device, emits a bounded result pointer containing the same
 identities, and publishes a sanitized fake child-result payload. Version 1
 direct and local-lab invocations remain supported.
 
-No real hardware adapter, firmware path, network target, runtime source
-checkout, artifact upload, or external publication is exercised.
+The production Gamma adapter code is exercised against a loopback mock, but no
+physical hardware, firmware path, non-loopback network target, runtime source
+checkout, external artifact upload, or external publication is exercised.
 
 ## Ownership boundary
 
@@ -214,31 +219,32 @@ Each step should be independently reviewable and keep direct runner use working.
 
 ## Proof-of-concept acceptance
 
-- [ ] Direct invocation and legacy/version 1 fixtures retain current behavior.
-- [ ] Valid version 2 metadata is accepted and all identities are immutable for
+- [x] Direct invocation and legacy/version 1 fixtures retain current behavior.
+- [x] Valid version 2 metadata is accepted and all identities are immutable for
   the invocation.
-- [ ] Unknown, malformed, oversized, inconsistent, or incomplete version 2
+- [x] Unknown, malformed, oversized, inconsistent, or incomplete version 2
   metadata fails before any device object or transport is created.
-- [ ] The version 2 pointer echoes the exact correlation chain and stays within
+- [x] The version 2 pointer echoes the exact correlation chain and stays within
   existing bounded atomic-write guarantees.
-- [ ] The fake published child payload contains complete non-secret source
+- [x] The fake published child payload contains complete non-secret source
   provenance and stable opaque correlation, with no private binding or device
   coordinate.
-- [ ] The published result is safe to return unchanged and contains no local
+- [x] The published result is safe to return unchanged and contains no local
   identity, physical-device alias, serial/USB identity, network coordinate,
   Bitcoin/payout address, pool worker identity, credential, artifact path,
   environment, or unsanitized-log field.
-- [ ] Passing, failing, error, timeout, and cleanup-failure fixtures prove that
+- [x] Passing, failing, error, timeout, and cleanup-failure fixtures prove that
   only a distinct post-run sanitized log can be published, with sanitizer
   version and digest.
-- [ ] Sanitizer or scan failure publishes no log, exposes no raw filename or
+- [x] Sanitizer or scan failure publishes no log, exposes no raw filename or
   content, and never falls back to the private raw capture.
-- [ ] Passing, failing, error, and skipped outcomes retain their current
+- [x] Passing, failing, error, and skipped outcomes retain their current
   meanings; skipped remains neutral in summaries.
-- [ ] Publisher failure and cleanup failure retain current failure semantics.
-- [ ] Both repository copies of the version 2 contract are semantically
+- [x] Publisher failure and cleanup failure retain current failure semantics.
+- [x] Both repository copies of the version 2 contract are semantically
   identical and tested independently.
-- [ ] No hardware, firmware, external publication, or deployment is performed.
+- [x] No physical hardware, firmware, external publication, or deployment is
+  performed.
 
 ## Verification
 

@@ -2,14 +2,14 @@
 
 ## Functional behavior
 
-- [ ] **TR-MOCK-AC-01:** The loopback process implements the exact
+- [x] **TR-MOCK-AC-01:** The loopback process implements the exact
   `mock-device-v1` process, control, AxeOS, state, event, and shutdown contract.
 - [x] **TR-MOCK-AC-02:** A real `bitaxe_602` adapter completes identity, pool
   mutation, restart, fake-Stratum interaction, result production, and verified
   baseline restoration in `pass`.
-- [ ] **TR-MOCK-AC-03:** Required failure scenarios deterministically produce
+- [x] **TR-MOCK-AC-03:** Required failure scenarios deterministically produce
   failed/error outcomes and never a false pass or unbounded wait.
-- [ ] **TR-MOCK-AC-04:** Identity mismatch is observed before any write;
+- [x] **TR-MOCK-AC-04:** Identity mismatch is observed before any write;
   cleanup rejection/mismatch records the restore attempt and remains an error.
 - [x] **TR-MOCK-AC-05:** Reset creates isolated baseline/counters/events and two
   simultaneous mock processes cannot share state, listener, or pool identity.
@@ -18,7 +18,7 @@
 
 - [x] **TR-MOCK-AC-06:** Existing real adapter and fake-Stratum public APIs are
   used without a full-integration-only production branch.
-- [ ] **TR-MOCK-AC-07:** Unknown device/control endpoints, OTA, serial,
+- [x] **TR-MOCK-AC-07:** Unknown device/control endpoints, OTA, serial,
   filesystem, arbitrary command, and non-loopback binding fail explicitly.
 
 ## Quality attributes
@@ -26,7 +26,7 @@
 - [x] **TR-MOCK-AC-08:** Bodies, events, waits, reconnects, faults, files,
   listeners, and process shutdown obey exact bounds and clean up after success
   and forced failure.
-- [ ] **TR-MOCK-AC-09:** Synthetic privacy canaries are visible in private raw
+- [x] **TR-MOCK-AC-09:** Synthetic privacy canaries are visible in private raw
   evidence but absent from public payloads, URLs, and sanitized logs.
 - [x] **TR-MOCK-AC-10:** Unit/component evidence is labeled simulation and does
   not check or satisfy any HIL acceptance item.
@@ -41,9 +41,14 @@
   processes and exact-PID/listener teardown, including pass, deterministic
   failure, cleanup rejection, malformed/private pre-device rejection, replay,
   expiry, and restart.
-- AC-01, AC-03, AC-04, AC-07, and AC-09 remain unchecked until direct component
-  coverage completes the scenario/fault control API, identity/no-write cases,
-  unsupported endpoints, and private-raw/public-sanitized canary path.
+- `tests.unit.test_mock_device` directly covers scenario locking, every bounded
+  fault shape, identity/no-write behavior, HTTP/malformed/restart failures,
+  cleanup rejection and mismatch, rejected-share and Stratum-disconnect paths,
+  unsupported operations, non-loopback/symlink refusal, reset isolation, and
+  private raw canary capture. All eight component cases passed on 2026-08-16.
+- `tests.unit.test_sanitized_log` and the Status-owned scenario evidence prove
+  that those private canaries are absent from the digest-addressed public copy,
+  pointer/result payload, and public Status data.
 
 ## Acceptance rule
 

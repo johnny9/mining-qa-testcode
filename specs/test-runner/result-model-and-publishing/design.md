@@ -46,6 +46,9 @@
 ### Files, artifacts, payloads, and persistent state
 
 - Local JSON is the canonical complete run record; HTML is a view.
+- An optional public `sanitized-log.json` descriptor names the sanitizer
+  version, source/public digests, size, and immutable `public-logs/<sha>.log`
+  object. Publisher artifact globs never include `.private` raw captures.
 - The result pointer contains only bounded correlation, status, child URL,
   local-result location, and optional artifact-manifest descriptor needed by the
   lab. Its top-level `contract_version` is `1`.
@@ -81,9 +84,10 @@ publisher records without changing the underlying test truth.
 
 1. Capture test/cleanup events and finalize the run summary.
 2. Persist canonical local JSON and HTML.
-3. Invoke remote publishers and append their records.
-4. Re-finalize local publication metadata and write the artifact manifest.
-5. Atomically write the pointer containing its verified descriptor.
+3. Produce and second-scan a distinct sanitized log when raw capture exists.
+4. Invoke remote publishers and append their records.
+5. Re-finalize local publication metadata and write the artifact manifest.
+6. Atomically write the pointer containing its verified descriptors.
 
 ## Failure and recovery
 

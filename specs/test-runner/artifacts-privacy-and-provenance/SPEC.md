@@ -13,8 +13,9 @@ without publishing secrets, payout identities, or sensitive local coordinates.
 
 ## Changelog
 
-- 2026-08-14: Linked the proposed v2 public/private correlation split and
-  mock-device privacy-canary scenarios.
+- 2026-08-16: Implemented the v2 public/private correlation split, private raw
+  runner/device logs, and independently scanned digest-addressed sanitized-log
+  publication with mock-device privacy canaries.
 - 2026-08-10: Added a bounded hash manifest of finalized sanitized artifacts for
   private lab archival redundancy.
 - 2026-08-10: Reconciled external `mining-qa-lab` source expectations with the

@@ -4,8 +4,8 @@
 
 | Component | Responsibility | Implementation pointer |
 |---|---|---|
-| Run/test artifacts | Create bounded paths and structured files | `src/miner_testcode/artifacts.py` |
-| Privacy formatter | Redact secrets and map sensitive values to stable labels | `src/miner_testcode/redaction.py:PrivacyFormatter` |
+| Run/test artifacts | Create separate bounded private raw and public structured paths | `src/miner_testcode/artifacts.py` |
+| Privacy formatter | Redact secrets, map sensitive values, and publish a second-scanned sanitized log | `src/miner_testcode/redaction.py` |
 | Provenance collector | Resolve repository origin, revision, cleanliness, and runtime metadata | `src/miner_testcode/provenance.py` |
 | Transport tracing | Emit sanitized method/status/timing metadata | `src/miner_testcode/interfaces/api.py` |
 | Runner | Finalize artifact manifest and publication inputs | `src/miner_testcode/runner.py` |
@@ -41,8 +41,10 @@
 
 ### Files, artifacts, payloads, and persistent state
 
-- A run contains metadata, per-test evidence, logs, results, and publisher
-  records. Paths are relative to the run root and names are sanitized.
+- A run contains metadata, per-test evidence, results, publisher records, and a
+  `.private/<run-id>` subtree for raw runner/device logs. Public logs are new
+  immutable `public-logs/<sha256>.log` objects plus `sanitized-log.json`; raw
+  bytes and raw names never enter public manifests or publisher globs.
 - After publishers finish, an orchestration manifest lists each finalized file
   by safe relative path, byte size, SHA-256, and media type. Its own descriptor
   enters the result pointer.
@@ -80,9 +82,12 @@ mapping is run-scoped so the same sensitive value has one consistent label.
 
 1. Collect source/runtime metadata and verify orchestrated source constraints.
 2. Register sensitive values and allocate run/per-test paths.
-3. Sanitize evidence at capture boundaries.
-4. Finalize publisher records and write the bounded artifact manifest.
-5. Expose sanitized publication inputs and the manifest descriptor.
+3. Capture bounded raw logs privately and sanitize structured evidence at its
+   capture boundaries.
+4. After cleanup, create a new sanitized log, independently scan the complete
+   bytes, and address it by SHA-256 without modifying the raw object.
+5. Finalize publisher records, write the bounded artifact manifest, and expose
+   only sanitized publication inputs and descriptors.
 
 ## Failure and recovery
 
