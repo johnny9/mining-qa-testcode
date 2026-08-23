@@ -10,7 +10,7 @@ from types import SimpleNamespace
 from miner_testcode.artifacts import RunArtifacts
 from miner_testcode.config import ConfigError
 from miner_testcode.provenance import ResolvedTestCode
-from miner_testcode.results import PublisherRecord, RunSummary, TestCodeRecord
+from miner_testcode.results import PublisherRecord, RunSummary, TestCodeRecord, TestRecord
 from miner_testcode.runner import (
     MiningTestResult,
     _result_pointer_payload,
@@ -21,6 +21,58 @@ from miner_testcode.telemetry import STANDARD_MINING_METRICS, TelemetryCapture
 
 
 class ResultMarkerTest(unittest.TestCase):
+    def test_preserves_complete_outcome_and_failure_matrix(self) -> None:
+        cases = (
+            ({"successful": True}, "passed", True),
+            ({"successful": False, "failures": 1}, "failed", False),
+            ({"successful": False, "errors": 1}, "error", False),
+            ({"successful": True, "tests_run": 1, "skipped": 1}, "skipped", True),
+            ({"successful": False, "errors": 1}, "error", False),  # cleanup error
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            for index, (overrides, expected_status, pointer_success) in enumerate(cases):
+                values = {
+                    "run_id": f"run-{index}",
+                    "artifact_root": Path(directory) / f"run-{index}",
+                    "started_at": 1.0,
+                    "finished_at": 2.0,
+                    "devices": (),
+                    "tests": (),
+                    "tests_run": 1,
+                    "failures": 0,
+                    "errors": 0,
+                    "skipped": 0,
+                    "expected_failures": 0,
+                    "unexpected_successes": 0,
+                    "successful": True,
+                }
+                values.update(overrides)
+                summary = RunSummary(**values)
+                payload = _result_pointer_payload(summary, successful=pointer_success)
+                self.assertEqual(payload["status"], expected_status)
+                self.assertEqual(payload["successful"], pointer_success)
+
+            publisher_failed = RunSummary(
+                run_id="publisher-failed",
+                artifact_root=Path(directory) / "publisher-failed",
+                started_at=1.0,
+                finished_at=2.0,
+                devices=(),
+                tests=(TestRecord("test", "device", "passed", 1.0),),
+                tests_run=1,
+                failures=0,
+                errors=0,
+                skipped=0,
+                expected_failures=0,
+                unexpected_successes=0,
+                successful=True,
+                publishers=[PublisherRecord("required", False, True, detail="timeout")],
+            )
+            pointer = _result_pointer_payload(publisher_failed, successful=False)
+            self.assertEqual(pointer["status"], "passed")
+            self.assertFalse(pointer["successful"])
+            self.assertEqual(pointer["publishers"][0]["detail"], "timeout")
+
     def test_writes_versioned_result_pointer_atomically(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

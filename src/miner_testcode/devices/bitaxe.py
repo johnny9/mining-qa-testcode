@@ -864,10 +864,12 @@ class BitaxeDevice(MiningDevice):
 
     async def save_device_logs(self) -> None:
         destination = self.artifacts.path / "device-api.log"
+        raw_destination = self.artifacts.private_path / "device-api.raw.log"
         try:
             truncated = await self.api.download_to(
-                "/api/system/logs", destination, max_bytes=self.log_max_bytes
+                "/api/system/logs", raw_destination, max_bytes=self.log_max_bytes
             )
+            destination.write_bytes(raw_destination.read_bytes())
             redact_file(destination)
             if truncated:
                 (self.artifacts.path / "device-api.log.TRUNCATED").write_text(

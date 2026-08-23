@@ -25,7 +25,12 @@ from .orchestration import (
     verify_orchestrated_testcode,
 )
 from .provenance import ResolvedTestCode, resolve_test_code
-from .redaction import PrivacyFormatter, redact_text, sanitize_artifacts
+from .redaction import (
+    PrivacyFormatter,
+    publish_sanitized_log,
+    redact_text,
+    sanitize_artifacts,
+)
 from .results import RunSummary, TestRecord
 from .testcase import MinerTestCase, TestContext
 
@@ -127,6 +132,7 @@ def _result_pointer_payload(
     successful: bool,
     orchestration: OrchestrationMetadata | None = None,
     artifact_manifest: Mapping[str, object] | None = None,
+    sanitized_log: Mapping[str, object] | None = None,
 ) -> dict[str, object]:
     payload: dict[str, object] = {
         "contract_version": orchestration.contract_version if orchestration else 1,
@@ -148,6 +154,8 @@ def _result_pointer_payload(
     }
     if artifact_manifest is not None:
         payload["artifact_manifest"] = dict(artifact_manifest)
+    if sanitized_log is not None:
+        payload["sanitized_log"] = dict(sanitized_log)
     if orchestration is not None and orchestration.is_v2:
         payload["correlation"] = orchestration.private_correlation()
     return payload
@@ -400,8 +408,10 @@ def _configure_logging(
     )
     console = logging.StreamHandler(sys.stderr)
     console.setFormatter(formatter)
-    file_handler = logging.FileHandler(artifacts.runner_log, encoding="utf-8")
-    file_handler.setFormatter(formatter)
+    file_handler = logging.FileHandler(artifacts.raw_runner_log, encoding="utf-8")
+    file_handler.setFormatter(
+        logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s")
+    )
     root.handlers.clear()
     root.addHandler(console)
     root.addHandler(file_handler)
@@ -588,6 +598,12 @@ def execute(argv: list[str] | None = None) -> RunOutcome:
     )
     for handler in logging.getLogger().handlers:
         handler.flush()
+    sanitized_log = publish_sanitized_log(
+        artifacts.raw_runner_log,
+        artifacts.path,
+        project_root=test_code.root,
+        replacements=privacy_replacements,
+    )
     sanitize_artifacts(
         artifacts.path,
         project_root=test_code.root,
@@ -612,6 +628,7 @@ def execute(argv: list[str] | None = None) -> RunOutcome:
                 successful=successful,
                 orchestration=orchestration,
                 artifact_manifest=artifact_manifest,
+                sanitized_log=sanitized_log,
             ),
         )
     return RunOutcome(successful=successful, summary=summary)

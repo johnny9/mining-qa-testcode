@@ -796,6 +796,8 @@ class MiningQaStatusPublisher:
             "result.json",
             "report.html",
             "runner.log",
+            "sanitized-log.json",
+            "public-logs/*.log",
             "events.jsonl",
             "**/test.log",
             "**/device-state.jsonl",

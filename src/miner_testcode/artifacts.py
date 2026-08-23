@@ -19,6 +19,7 @@ def safe_name(value: str) -> str:
 @dataclass(frozen=True, slots=True)
 class TestArtifacts:
     path: Path
+    private_path: Path
     events_path: Path
     state_path: Path
     serial_path: Path
@@ -26,10 +27,14 @@ class TestArtifacts:
     telemetry_path: Path
 
     @classmethod
-    def create(cls, path: Path) -> "TestArtifacts":
+    def create(cls, path: Path, *, private_path: Path | None = None) -> "TestArtifacts":
         path.mkdir(parents=True, exist_ok=False)
+        private_path = private_path or (path / ".private")
+        private_path.mkdir(parents=True, exist_ok=False)
+        private_path.chmod(0o700)
         return cls(
             path=path,
+            private_path=private_path,
             events_path=path / "events.jsonl",
             state_path=path / "device-state.jsonl",
             serial_path=path / "serial.log",
@@ -43,6 +48,10 @@ class RunArtifacts:
         self.run_id = run_id
         self.path = root / run_id
         self.path.mkdir(parents=True, exist_ok=False)
+        self.private_path = root / ".private" / run_id
+        self.private_path.mkdir(parents=True, exist_ok=False)
+        self.private_path.chmod(0o700)
+        self.raw_runner_log = self.private_path / "runner.raw.log"
         self.runner_log = self.path / "runner.log"
         self.events_path = self.path / "events.jsonl"
         self._lock = threading.Lock()
@@ -58,7 +67,10 @@ class RunArtifacts:
             self._ordinal += 1
             ordinal = self._ordinal
         dirname = f"{ordinal:03d}-{safe_name(device_name)}-{safe_name(test_id)}"
-        return TestArtifacts.create(self.path / dirname)
+        return TestArtifacts.create(
+            self.path / dirname,
+            private_path=self.private_path / dirname,
+        )
 
     def append_event(self, event: dict[str, Any]) -> None:
         append_jsonl(self.events_path, event, lock=self._lock)

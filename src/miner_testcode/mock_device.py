@@ -35,6 +35,18 @@ SCENARIOS = frozenset(
         "log-privacy-canary",
     }
 )
+FAULT_KINDS = frozenset(
+    {
+        "http_status",
+        "drop_connection",
+        "delay_ms",
+        "malformed_json",
+        "reject_patch",
+        "ignore_patch",
+        "stay_offline_after_restart",
+        "stratum_disconnect_stage",
+    }
+)
 
 
 def _timestamp() -> str:
@@ -81,6 +93,10 @@ class MockState:
         self.scenario = "pass"
         self.canaries: tuple[str, ...] = ()
         self.patch_count = 0
+        self.lifecycle_started = False
+        self.mutating = False
+        self.transition_delay_ms = 750
+        self.faults: dict[str, dict[str, Any]] = {}
         self.offline_until = 0.0
         self.pending: dict[str, Any] = {}
         self.started_at = time.monotonic()
@@ -155,6 +171,10 @@ class MockState:
             self.scenario = scenario
             self.canaries = tuple(canaries)
             self.patch_count = 0
+            self.lifecycle_started = False
+            self.mutating = False
+            self.transition_delay_ms = 750
+            self.faults = {}
             self.offline_until = 0.0
             self.started_at = time.monotonic()
             self.sequence = 0
@@ -163,6 +183,90 @@ class MockState:
             self.events_file.parent.mkdir(parents=True, exist_ok=True)
             self.events_file.write_bytes(b"")
             self.record("started", {"scenario": scenario})
+
+    def set_scenario(self, scenario: str, transition_delay_ms: int) -> None:
+        if scenario not in SCENARIOS:
+            raise ValueError(f"unsupported scenario: {scenario}")
+        if (
+            isinstance(transition_delay_ms, bool)
+            or not isinstance(transition_delay_ms, int)
+            or not 0 <= transition_delay_ms <= 2_000
+        ):
+            raise ValueError("transition_delay_ms must be from 0 through 2000")
+        with self.lock:
+            if self.lifecycle_started:
+                raise PermissionError("scenario_active")
+            self.scenario = scenario
+            self.transition_delay_ms = transition_delay_ms
+            self.record("fault_applied", {"scenario": scenario, "phase": "selected"})
+
+    def set_faults(self, faults: list[Mapping[str, Any]]) -> None:
+        if len(faults) > len(FAULT_KINDS):
+            raise ValueError("too many faults")
+        parsed: dict[str, dict[str, Any]] = {}
+        for item in faults:
+            if not isinstance(item, Mapping):
+                raise ValueError("fault entries must be objects")
+            kind = item.get("kind")
+            count = item.get("count")
+            if kind not in FAULT_KINDS:
+                raise ValueError(f"unsupported fault: {kind}")
+            if isinstance(count, bool) or not isinstance(count, int) or not 1 <= count <= 100:
+                raise ValueError("fault count must be from 1 through 100")
+            if kind in parsed:
+                raise ValueError("fault kinds must not repeat")
+            allowed = {"kind", "count"}
+            if kind == "http_status":
+                allowed.add("status")
+            elif kind == "delay_ms":
+                allowed.add("delay_ms")
+            elif kind == "stratum_disconnect_stage":
+                allowed.add("stage")
+            if set(item) - allowed:
+                raise ValueError(f"{kind} fault contains unsupported fields")
+            value = {"kind": kind, "count": count}
+            if kind == "http_status":
+                status = item.get("status")
+                if isinstance(status, bool) or not isinstance(status, int) or not 400 <= status <= 599:
+                    raise ValueError("http_status fault requires status from 400 through 599")
+                value["status"] = status
+            if kind == "delay_ms":
+                delay = item.get("delay_ms")
+                if isinstance(delay, bool) or not isinstance(delay, int) or not 0 <= delay <= 2_000:
+                    raise ValueError("delay_ms fault requires delay_ms from 0 through 2000")
+                value["delay_ms"] = delay
+            if kind == "stratum_disconnect_stage":
+                stage = item.get("stage")
+                if stage not in {"authorize", "notify"}:
+                    raise ValueError("stratum_disconnect_stage must be authorize or notify")
+                value["stage"] = stage
+            parsed[str(kind)] = value
+        with self.lock:
+            self.faults = parsed
+
+    def consume_fault(self, kind: str) -> dict[str, Any] | None:
+        with self.lock:
+            fault = self.faults.get(kind)
+            if not fault:
+                return None
+            remaining = int(fault["count"]) - 1
+            value = dict(fault)
+            if remaining:
+                fault["count"] = remaining
+            else:
+                self.faults.pop(kind, None)
+            self.record("fault_applied", {"fault": kind, "remaining": remaining})
+            return value
+
+    def sanitized_state(self) -> dict[str, Any]:
+        return {
+            "miningPaused": bool(self.device.get("miningPaused")),
+            "stratumHostClass": "loopback"
+            if str(self.device.get("stratumURL")) in {"127.0.0.1", "::1", "localhost"}
+            else "non-loopback",
+            "stratumPort": int(self.device.get("stratumPort", 0)),
+            "stratumProtocol": str(self.device.get("stratumProtocol", "")),
+        }
 
     def public_device(self) -> dict[str, Any]:
         with self.lock:
@@ -176,8 +280,13 @@ class MockState:
 
     def patch(self, value: Mapping[str, Any]) -> None:
         with self.lock:
+            self.mutating = True
+            previous = self.sanitized_state()
             self.patch_count += 1
-            if self.scenario == "cleanup-restore-rejected" and self.patch_count >= 2:
+            if (
+                self.scenario == "cleanup-restore-rejected" and self.patch_count >= 2
+            ) or self.consume_fault("reject_patch"):
+                self.mutating = False
                 self.record("fault_applied", {"fault": "reject_patch", "phase": "cleanup"})
                 raise PermissionError("cleanup restore rejected")
             update = dict(value)
@@ -201,9 +310,21 @@ class MockState:
                 "useFallbackStratum",
             }
             if not update or set(update) - allowed:
+                self.mutating = False
                 raise ValueError("PATCH contains unsupported fields")
-            self.pending.update(update)
-            self.record("settings_patch", {"keys": sorted(update)})
+            if not self.consume_fault("ignore_patch"):
+                self.pending.update(update)
+            next_state = dict(previous)
+            if "stratumURL" in update:
+                next_state["stratumHostClass"] = "loopback" if str(update["stratumURL"]) in {"127.0.0.1", "::1", "localhost"} else "non-loopback"
+            for source, target in (("stratumPort", "stratumPort"), ("stratumProtocol", "stratumProtocol")):
+                if source in update:
+                    next_state[target] = update[source]
+            self.record(
+                "settings_patch",
+                {"keys": sorted(update), "previous": previous, "next": next_state},
+            )
+            self.mutating = False
 
     def restart(self) -> None:
         with self.lock:
@@ -214,11 +335,11 @@ class MockState:
                 self.device["stratumUser"] = "restore-mismatch"
                 self.record("fault_applied", {"fault": "ignore_patch", "phase": "cleanup"})
             self.record("restart", {"patch_count": self.patch_count})
-            if self.scenario == "restart-never-returns":
+            if self.scenario == "restart-never-returns" or self.consume_fault("stay_offline_after_restart"):
                 self.device["hashRate"] = 0.0
                 self.record("offline")
                 return
-            self.offline_until = time.monotonic() + 0.75
+            self.offline_until = time.monotonic() + (self.transition_delay_ms / 1000)
             self.record("offline")
         self.start_stratum()
 
@@ -267,6 +388,9 @@ class MockState:
                     username = str(self.device.get("stratumUser", "integration.worker"))
                 send({"id": 3, "method": "mining.authorize", "params": [username, "x"]})
                 self.record("stratum_authorize")
+                disconnect = self.consume_fault("stratum_disconnect_stage")
+                if disconnect and disconnect.get("stage") == "authorize":
+                    return
                 while not stopped.is_set():
                     try:
                         line = stream.readline(MAX_BODY_BYTES + 1)
@@ -290,7 +414,9 @@ class MockState:
                     if not isinstance(params, list) or len(params) < 8:
                         return
                     self.record("stratum_notify", {"job_id": str(params[0])[:64]})
-                    if self.scenario == "stratum-disconnect":
+                    if self.scenario == "stratum-disconnect" or (
+                        disconnect and disconnect.get("stage") == "notify"
+                    ):
                         self.record("fault_applied", {"fault": "stratum_disconnect_stage"})
                         return
                     send(
@@ -341,11 +467,31 @@ class MockHandler(BaseHTTPRequestHandler):
     def _error(self, status: int, code: str, message: str) -> None:
         self._send(status, {"error": {"code": code, "message": message[:500]}})
 
+    def _fault_response(self) -> bool:
+        state = self.server.state
+        delay = state.consume_fault("delay_ms")
+        if delay:
+            time.sleep(float(delay["delay_ms"]) / 1000)
+        status = state.consume_fault("http_status")
+        if status:
+            self._error(int(status["status"]), "fault", "configured HTTP status fault")
+            return True
+        if state.consume_fault("drop_connection"):
+            self.close_connection = True
+            return True
+        if state.consume_fault("malformed_json"):
+            self._send(HTTPStatus.OK, "{malformed", content_type="application/json-invalid")
+            return True
+        return False
+
     def do_GET(self) -> None:  # noqa: N802
         parsed = urlsplit(self.path)
         state = self.server.state
         try:
             if parsed.path == "/api/system/info":
+                state.lifecycle_started = True
+                if self._fault_response():
+                    return
                 if state.scenario == "http-unavailable":
                     self._error(HTTPStatus.SERVICE_UNAVAILABLE, "fault", "device unavailable")
                     return
@@ -383,6 +529,7 @@ class MockHandler(BaseHTTPRequestHandler):
                         "contract_version": 1,
                         "process_state": state.process_state,
                         "scenario": state.scenario,
+                        "active_faults": sorted(state.faults.values(), key=lambda item: item["kind"]),
                         "device": state.public_device(),
                         "event_sequence": state.sequence,
                     },
@@ -408,6 +555,9 @@ class MockHandler(BaseHTTPRequestHandler):
                 state.record("unsupported_operation", {"method": "PATCH"})
                 self._error(HTTPStatus.CONFLICT, "unsupported_operation", "unsupported operation")
                 return
+            state.lifecycle_started = True
+            if self._fault_response():
+                return
             state.patch(self._body())
             self._send(HTTPStatus.OK, {"accepted": True})
         except PermissionError as exc:
@@ -416,15 +566,21 @@ class MockHandler(BaseHTTPRequestHandler):
             self._error(HTTPStatus.REQUEST_ENTITY_TOO_LARGE, "payload_too_large", str(exc))
         except (ValueError, RuntimeError, json.JSONDecodeError) as exc:
             self._error(HTTPStatus.BAD_REQUEST, "invalid_request", str(exc))
+        finally:
+            state.mutating = False
 
     def do_POST(self) -> None:  # noqa: N802
         state = self.server.state
         try:
             if self.path == "/api/system/restart":
+                state.lifecycle_started = True
+                if self._fault_response():
+                    return
                 state.restart()
                 self._send(HTTPStatus.OK, {"accepted": True})
                 return
             if self.path == "/api/system/pause":
+                state.lifecycle_started = True
                 with state.lock:
                     state.device["miningPaused"] = True
                     state.device["hashRate"] = 0.0
@@ -432,6 +588,7 @@ class MockHandler(BaseHTTPRequestHandler):
                 self._send(HTTPStatus.OK, {"accepted": True})
                 return
             if self.path == "/api/system/resume":
+                state.lifecycle_started = True
                 with state.lock:
                     state.device["miningPaused"] = False
                     state.device["hashRate"] = 1000.0
@@ -440,6 +597,9 @@ class MockHandler(BaseHTTPRequestHandler):
                 self._send(HTTPStatus.OK, {"accepted": True})
                 return
             if self.path == "/__mock/v1/reset":
+                if state.mutating:
+                    self._error(HTTPStatus.CONFLICT, "mutation_active", "device mutation is active")
+                    return
                 body = self._body()
                 if body.get("contract_version") != 1 or body.get("baseline") != "gamma-running":
                     raise ValueError("reset requires contract_version 1 and gamma-running baseline")
@@ -455,6 +615,42 @@ class MockHandler(BaseHTTPRequestHandler):
             self._error(HTTPStatus.REQUEST_ENTITY_TOO_LARGE, "payload_too_large", str(exc))
         except (ValueError, RuntimeError, json.JSONDecodeError) as exc:
             self._error(HTTPStatus.BAD_REQUEST, "invalid_request", str(exc))
+
+    def do_PUT(self) -> None:  # noqa: N802
+        state = self.server.state
+        try:
+            body = self._body()
+            if body.get("contract_version") != 1:
+                raise ValueError("control body requires contract_version 1")
+            if self.path == "/__mock/v1/scenario":
+                state.set_scenario(
+                    str(body.get("scenario", "")),
+                    body.get("transition_delay_ms", 50),
+                )
+                self._send(HTTPStatus.OK, {"contract_version": 1, "scenario": state.scenario})
+                return
+            if self.path == "/__mock/v1/faults":
+                faults = body.get("faults")
+                if not isinstance(faults, list):
+                    raise ValueError("faults must be an array")
+                state.set_faults(faults)
+                self._send(
+                    HTTPStatus.OK,
+                    {"contract_version": 1, "active_faults": sorted(state.faults.values(), key=lambda item: item["kind"])},
+                )
+                return
+            state.record("unsupported_operation", {"method": "PUT", "path": self.path[:100]})
+            self._error(HTTPStatus.CONFLICT, "unsupported_operation", "unsupported operation")
+        except PermissionError:
+            self._error(HTTPStatus.CONFLICT, "scenario_active", "runner lifecycle already started")
+        except OverflowError as exc:
+            self._error(HTTPStatus.REQUEST_ENTITY_TOO_LARGE, "payload_too_large", str(exc))
+        except (TypeError, ValueError, RuntimeError, json.JSONDecodeError) as exc:
+            self._error(HTTPStatus.BAD_REQUEST, "invalid_request", str(exc))
+
+    def do_DELETE(self) -> None:  # noqa: N802
+        self.server.state.record("unsupported_operation", {"method": "DELETE", "path": self.path[:100]})
+        self._error(HTTPStatus.CONFLICT, "unsupported_operation", "unsupported operation")
 
 
 class MockServer(ThreadingHTTPServer):
@@ -475,25 +671,39 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def _validated_path(value: str) -> Path:
-    path = Path(value).expanduser().resolve()
-    if path.exists() and path.is_symlink():
-        raise ValueError(f"path must not be a symlink: {path}")
+    unresolved = Path(value).expanduser()
+    absolute = unresolved.absolute()
+    for candidate in (absolute, *absolute.parents):
+        if candidate.exists() and candidate.is_symlink():
+            raise ValueError(f"path must not contain a symlink: {candidate}")
+    path = unresolved.resolve()
     path.parent.mkdir(parents=True, exist_ok=True)
     return path
+
+
+def _validate_bind_host(host: str, port: int) -> None:
+    addresses = {
+        item[4][0]
+        for item in socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)
+    }
+    if not addresses or any(
+        not ipaddress.ip_address(address).is_loopback for address in addresses
+    ):
+        raise ValueError("mock device host must resolve only to loopback")
+    if not 0 <= port <= 65535:
+        raise ValueError("mock device port must be from 0 through 65535")
 
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
-        addresses = {item[4][0] for item in socket.getaddrinfo(args.host, args.port, type=socket.SOCK_STREAM)}
-        if not addresses or any(not ipaddress.ip_address(address).is_loopback for address in addresses):
-            raise ValueError("mock device host must resolve only to loopback")
-        if not 0 <= args.port <= 65535:
-            raise ValueError("mock device port must be from 0 through 65535")
+        _validate_bind_host(args.host, args.port)
         state_file = _validated_path(args.state_file)
         events_file = _validated_path(args.events_file)
         if state_file.parent != events_file.parent:
             raise ValueError("state and event files must share one harness-owned directory")
+        if state_file == events_file:
+            raise ValueError("state and event files must be distinct")
         state = MockState(state_file, events_file)
         state.reset("pass", [])
         server = MockServer((args.host, args.port), state)
