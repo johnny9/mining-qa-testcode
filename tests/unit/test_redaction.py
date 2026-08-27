@@ -28,6 +28,17 @@ class RedactionTest(unittest.TestCase):
         self.assertNotIn("npub1", redacted)
         self.assertIn("<redacted", redacted)
 
+    def test_redacts_local_device_hostnames(self) -> None:
+        data = (
+            b"identified at http://gamma-canary.local "
+            b"websocket=ws://gamma-canary.local/api/ws/live"
+        )
+
+        redacted = redact_bytes(data)
+
+        self.assertNotIn(b"gamma-canary.local", redacted)
+        self.assertIn(b"<redacted-local-host>", redacted)
+
     def test_rewrites_repository_paths_and_removes_other_local_paths(self) -> None:
         project = Path("/home/alice/work/mining-qa-testcode")
         artifacts = project / "artifacts/run-1"

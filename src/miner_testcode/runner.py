@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
 from typing import Iterator, Mapping
+from urllib.parse import urlsplit
 
 from .artifacts import RunArtifacts
 from .config import ConfigError, DeviceConfig, ProjectConfig, load_config
@@ -418,9 +419,23 @@ def _configure_logging(
 
 
 def _privacy_replacements(devices: tuple[DeviceConfig, ...]) -> dict[str, str]:
-    replacements = {
-        device.name: device.publication_name for device in devices
-    }
+    replacements: dict[str, str] = {}
+    for device in devices:
+        replacements[device.name] = device.publication_name
+        for interface_name, key, replacement in (
+            ("api", "base_url", "<device-address>"),
+            ("websocket", "url", "<device-address>"),
+            ("serial", "port", "<serial-path>"),
+        ):
+            value = device.interface(interface_name).get(key)
+            if not isinstance(value, str) or not value.strip():
+                continue
+            value = value.strip()
+            replacements[value] = replacement
+            if interface_name in {"api", "websocket"}:
+                hostname = urlsplit(value).hostname
+                if hostname:
+                    replacements[hostname] = replacement
     raw = os.environ.get("MINER_TEST_PRIVACY_CANARIES", "").strip()
     if not raw:
         return replacements

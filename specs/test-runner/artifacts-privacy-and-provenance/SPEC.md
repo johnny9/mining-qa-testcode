@@ -5,7 +5,7 @@ without publishing secrets, payout identities, or sensitive local coordinates.
 
 - **Lifecycle:** supported
 - **Owner:** hardware-test maintainers
-- **Last reconciled:** 2026-08-10
+- **Last reconciled:** 2026-08-26
 - **Spec ID:** TR-EVIDENCE
 
 [Intent](intent.md) · [Acceptance](acceptance.md) · [Design](design.md) ·
@@ -13,6 +13,9 @@ without publishing secrets, payout identities, or sensitive local coordinates.
 
 ## Changelog
 
+- 2026-08-26: Registered configured API, WebSocket, and serial coordinates as
+  run-scoped private replacements and added fail-closed `.local` hostname
+  redaction after a representative Gamma HIL artifact audit found a leak.
 - 2026-08-16: Implemented the v2 public/private correlation split, private raw
   runner/device logs, and independently scanned digest-addressed sanitized-log
   publication with mock-device privacy canaries.

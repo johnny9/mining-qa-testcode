@@ -23,6 +23,11 @@ _PRIVATE_IPV4 = re.compile(
     rb"\b(?:10(?:\.\d{1,3}){3}|192\.168(?:\.\d{1,3}){2}|"
     rb"172\.(?:1[6-9]|2\d|3[01])(?:\.\d{1,3}){2})\b"
 )
+_LOCAL_HOSTNAME = re.compile(
+    rb"(?i)(?<![A-Za-z0-9-])"
+    rb"(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+"
+    rb"local(?![A-Za-z0-9-])"
+)
 _LOCAL_PATH = re.compile(
     rb"(?<![A-Za-z0-9])/(?:home|Users|tmp|private|var|dev|usr|opt|etc|run)/"
     rb"(?:[^\s\"'<>])+"
@@ -40,6 +45,7 @@ def _assert_public_log_safe(
         (_ADDRESS, "pool or payout identity"),
         (_MAC_ADDRESS, "MAC address"),
         (_PRIVATE_IPV4, "private IP address"),
+        (_LOCAL_HOSTNAME, "local hostname"),
         (_LOCAL_PATH, "local path"),
     )
     for pattern, label in scanners:
@@ -84,6 +90,7 @@ def redact_bytes(
     )
     data = _MAC_ADDRESS.sub(b"<redacted-mac>", data)
     data = _PRIVATE_IPV4.sub(b"<redacted-private-ip>", data)
+    data = _LOCAL_HOSTNAME.sub(b"<redacted-local-host>", data)
     return _LOCAL_PATH.sub(b"<local-path>", data)
 
 

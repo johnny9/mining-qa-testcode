@@ -26,7 +26,7 @@
 
 - [x] **TR-EVIDENCE-AC-07:** Unit tests use canary secrets/identities and prove
   they are absent from serialized output.
-- [ ] **TR-EVIDENCE-AC-08:** A current representative run has been manually
+- [x] **TR-EVIDENCE-AC-08:** A current representative run has been manually
   audited across every local and remote artifact for privacy and provenance.
 
 ## Verification evidence
@@ -34,9 +34,14 @@
 - `tests.unit.test_redaction`, `tests.unit.test_provenance`,
   `tests.unit.test_runner`, `tests.unit.test_config`, and API-interface tests
   cover the core transformations, pre-hardware source guard, and artifact
-  handling and orchestration manifest hashing; reconciled 2026-08-10.
-- A fresh full publication audit was not performed for this documentation
-  iteration.
+  handling and orchestration manifest hashing. The 2026-08-26 regression adds
+  configured endpoint registration and independent `.local` hostname
+  redaction.
+- A 2026-08-26 authorized Gamma 602 read-only HIL rerun passed after the
+  local-hostname fix. An independent audit scanned all 16 finalized public
+  artifacts with zero private-coordinate occurrences and zero scanner
+  failures, verified the sanitized-log digest, and confirmed the local-only
+  publisher produced no remote surface.
 
 ## Acceptance rule
 

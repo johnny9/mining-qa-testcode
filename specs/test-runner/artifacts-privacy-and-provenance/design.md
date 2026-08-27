@@ -21,6 +21,8 @@
 
 - Reporting/privacy settings define stable labels and publication behavior.
   Secret values are references, not serialized configuration output.
+- Configured API and WebSocket endpoints plus serial selectors are registered
+  as run-scoped private coordinates before logging or artifact capture.
 
 ### Environment
 
@@ -57,6 +59,8 @@
   serial device paths.
 - Known secrets and payout identities are redacted recursively in strings and
   structured payloads before persistence/publication.
+- Configured device endpoints are replaced consistently, and independently
+  recognized `.local` hostnames are rejected from sanitized public logs.
 - Provenance distinguishes origin URL, exact HEAD SHA, working-tree state, and
   externally supplied commit claims.
 - When orchestration supplies expected testcode repository/SHA, independently
@@ -81,7 +85,8 @@ mapping is run-scoped so the same sensitive value has one consistent label.
 ## Control and data flow
 
 1. Collect source/runtime metadata and verify orchestrated source constraints.
-2. Register sensitive values and allocate run/per-test paths.
+2. Register sensitive values and configured device coordinates, then allocate
+   run/per-test paths.
 3. Capture bounded raw logs privately and sanitize structured evidence at its
    capture boundaries.
 4. After cleanup, create a new sanitized log, independently scan the complete
@@ -92,6 +97,8 @@ mapping is run-scoped so the same sensitive value has one consistent label.
 ## Failure and recovery
 
 - Unsafe path or serialization failure fails evidence production.
+- A configured endpoint or local hostname left in a sanitized runner log fails
+  the public-log scan before publication.
 - Provenance mismatch is retained explicitly and blocks strict remote claims.
 - Failed publisher upload does not delete the local source artifacts.
 

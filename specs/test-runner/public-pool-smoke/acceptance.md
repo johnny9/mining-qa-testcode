@@ -40,6 +40,11 @@
   received a Stratum job, observed stable healthy mining, retained port `3333`
   through cleanup, and passed independent post-cleanup state and
   artifact-privacy checks; run 2026-08-10.
+- Authorized Bitaxe Gamma 602 observational HIL on firmware `f711cad` received
+  an independently probed Stratum job, passed the stable healthy-mining window,
+  recorded only GET/HEAD API operations, closed serial capture without error,
+  retained the original pool and healthy state, and passed a 16-file finalized
+  artifact privacy audit; run 2026-08-26.
 
 ## Acceptance rule
 

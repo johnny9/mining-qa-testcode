@@ -8,16 +8,48 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from miner_testcode.artifacts import RunArtifacts
-from miner_testcode.config import ConfigError
+from miner_testcode.config import ConfigError, DeviceConfig
 from miner_testcode.provenance import ResolvedTestCode
 from miner_testcode.results import PublisherRecord, RunSummary, TestCodeRecord, TestRecord
 from miner_testcode.runner import (
     MiningTestResult,
+    _privacy_replacements,
     _result_pointer_payload,
     _write_artifact_manifest,
     _write_result_pointer,
 )
+from miner_testcode.redaction import redact_text
 from miner_testcode.telemetry import STANDARD_MINING_METRICS, TelemetryCapture
+
+
+class PrivacyReplacementTest(unittest.TestCase):
+    def test_registers_configured_device_coordinates(self) -> None:
+        device = DeviceConfig(
+            name="private-lab-device",
+            type="bitaxe_602",
+            interfaces={
+                "api": {"base_url": "http://gamma-canary.example:8080"},
+                "websocket": {
+                    "url": "ws://gamma-canary.example:8080/api/ws/live"
+                },
+                "serial": {"port": "/dev/serial/by-id/private-canary-*"},
+            },
+            options={"publication_name": "Bitaxe Gamma"},
+        )
+
+        redacted = redact_text(
+            "private-lab-device http://gamma-canary.example:8080 "
+            "ws://gamma-canary.example:8080/api/ws/live "
+            "/dev/serial/by-id/private-canary-device",
+            replacements=_privacy_replacements((device,)),
+        )
+
+        self.assertNotIn("private-lab-device", redacted)
+        self.assertNotIn("gamma-canary.example", redacted)
+        self.assertNotIn("/dev/serial", redacted)
+        self.assertIn("Bitaxe Gamma", redacted)
+        self.assertIn("<device-address>", redacted)
+        self.assertIn("<local-path>", redacted)
 
 
 class ResultMarkerTest(unittest.TestCase):
