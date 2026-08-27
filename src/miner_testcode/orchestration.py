@@ -163,8 +163,8 @@ def _validate_v2(value: dict[str, Any], environ: Mapping[str, str]) -> None:
     _string(value["public_lab_label"], "orchestration.public_lab_label", maximum=80)
     _string(value["platform_class"], "orchestration.platform_class", maximum=80)
     _string(value["device_model"], "orchestration.device_model", maximum=80)
-    if value["trigger_type"] != "manual":
-        raise ConfigError("orchestration.trigger_type must be manual in contract v2")
+    if value["trigger_type"] not in {"manual", "push", "pull_request"}:
+        raise ConfigError("orchestration.trigger_type is invalid in contract v2")
     if not isinstance(value["definition_digest"], str) or not _DIGEST.fullmatch(
         value["definition_digest"]
     ):

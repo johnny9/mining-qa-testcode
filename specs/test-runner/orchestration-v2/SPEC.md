@@ -6,7 +6,7 @@ evidence.
 
 - **Lifecycle:** supported
 - **Owner:** test-runner maintainers
-- **Last reconciled:** 2026-08-16
+- **Last reconciled:** 2026-08-27
 - **Spec ID:** TR-ORCH-V2
 
 [Intent](intent.md) · [Acceptance](acceptance.md) · [Design](design.md) ·
@@ -14,6 +14,9 @@ evidence.
 
 ## Changelog
 
+- 2026-08-27: Expanded central trigger provenance to the closed set `manual`,
+  `push`, and `pull_request`; this changes correlation only and grants no local
+  hardware authority.
 - 2026-08-16: Implemented the strict v2 reader, exact environment/provenance
   validation, public/private serializers, v2 pointer correlation, Status child
   identity, and explicit dirty local-simulation exception.

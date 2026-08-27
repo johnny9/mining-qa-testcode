@@ -100,7 +100,8 @@ Every field below is required; only `source.pr_number` may be null.
 }
 ```
 
-`trigger_type` is `manual` in the proof of concept. `attempt` is 1–1000 and
+`trigger_type` is `manual`, `push`, or `pull_request`; it records central
+provenance and does not grant hardware authority. `attempt` is 1–1000 and
 must equal the immutable Lab attempt record associated with `attempt_id`.
 
 The definition digest is supplied by Status and verified by Lab against its

@@ -26,6 +26,9 @@
 - [x] **TR-ORCH-V2-AC-08:** Public child correlation is accepted by Status only
   when it matches frozen gate/Lab execution data; Testcode cannot create or
   retarget a global run.
+- [x] **TR-ORCH-V2-AC-12:** V2 metadata accepts only central `manual`, `push`,
+  and `pull_request` trigger provenance while preserving the same Testcode
+  source, device, cleanup, and publication authority boundaries.
 
 ## Quality attributes
 
@@ -41,6 +44,9 @@
 
 ## Verification evidence
 
+- The complete Testcode unit suite passed all 90 tests on 2026-08-27,
+  including acceptance of the three central trigger provenance values and
+  rejection of values outside the closed set before device construction.
 - `PYTHONPATH=src python3 -m unittest discover -s tests/unit -v` passed all 81
   tests on 2026-08-16, including strict metadata/environment,
   dirty-development opt-in, provenance, atomic pointer, manifest, publisher,

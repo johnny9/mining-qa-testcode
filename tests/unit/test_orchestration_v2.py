@@ -85,6 +85,17 @@ class OrchestrationV2Test(unittest.TestCase):
         with self.assertRaisesRegex(ConfigError, "MINER_TEST_EXTERNAL_RUN_ID"):
             load_orchestration_metadata(mismatched)
 
+    def test_accepts_central_repository_trigger_types(self) -> None:
+        for trigger_type in ("manual", "push", "pull_request"):
+            with self.subTest(trigger_type=trigger_type):
+                value = metadata()
+                value["trigger_type"] = trigger_type
+                self.assertIsNotNone(load_orchestration_metadata(environment(value)))
+        value = metadata()
+        value["trigger_type"] = "schedule"
+        with self.assertRaisesRegex(ConfigError, "trigger_type is invalid"):
+            load_orchestration_metadata(environment(value))
+
     def test_rejects_dirty_v2_unless_local_development_is_explicit(self) -> None:
         value = metadata()
         parsed = load_orchestration_metadata(environment(value))
