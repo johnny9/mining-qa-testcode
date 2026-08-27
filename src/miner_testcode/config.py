@@ -9,6 +9,7 @@ from types import MappingProxyType
 from typing import Any, Mapping
 
 from .errors import ConfigError
+from .module_catalog import selected_module_options
 
 _ENV_PATTERN = re.compile(r"^\$\{([A-Za-z_][A-Za-z0-9_]*)\}$")
 
@@ -210,6 +211,13 @@ def load_config(path: str | os.PathLike[str]) -> ProjectConfig:
         if not isinstance(settings, dict):
             raise ConfigError(f"tests.{name} must be a table")
         tests[name] = _frozen_mapping(settings)
+
+    portable_selection = selected_module_options()
+    if portable_selection is not None:
+        module_id, portable_values = portable_selection
+        merged = dict(tests.get(module_id, MappingProxyType({})))
+        merged.update(portable_values)
+        tests[module_id] = _frozen_mapping(merged)
 
     publishers_raw = raw.get("publishers", {})
     if not isinstance(publishers_raw, dict):

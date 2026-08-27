@@ -27,3 +27,6 @@ miner-test = "miner_testcode.runner:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+miner_testcode = ["module-catalog.v1.json"]

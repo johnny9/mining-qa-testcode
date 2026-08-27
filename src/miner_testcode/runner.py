@@ -19,6 +19,7 @@ from urllib.parse import urlsplit
 
 from .artifacts import RunArtifacts
 from .config import ConfigError, DeviceConfig, ProjectConfig, load_config
+from .module_catalog import validate_selected_module_pattern
 from .publishers import PublisherManager
 from .orchestration import (
     OrchestrationMetadata,
@@ -497,12 +498,7 @@ def execute(argv: list[str] | None = None) -> RunOutcome:
     invalid_cli_prs = [number for number in args.validation_pr if number <= 0]
     if invalid_cli_prs:
         raise ConfigError("--validation-pr must be a positive integer")
-    validation_prs = frozenset(
-        {*project.runner.validation_prs, *args.validation_pr}
-    )
-    devices = project.selected_devices(set(args.devices) if args.devices else None)
-    if not devices:
-        raise ConfigError("no enabled devices are configured")
+    validation_prs = frozenset({*project.runner.validation_prs, *args.validation_pr})
     remote_publication = any(
         bool(project.publisher_settings(name).get("enabled", False))
         for name in ("github", "mining_qa_status")
@@ -517,6 +513,11 @@ def execute(argv: list[str] | None = None) -> RunOutcome:
         require_published=remote_publication and not integration_development,
     )
     verify_orchestrated_testcode(orchestration, test_code)
+    pattern = args.pattern or project.runner.pattern
+    validate_selected_module_pattern(pattern)
+    devices = project.selected_devices(set(args.devices) if args.devices else None)
+    if not devices:
+        raise ConfigError("no enabled devices are configured")
     privacy_replacements = _privacy_replacements(devices)
     artifacts = RunArtifacts.create(project.runner.artifacts_dir)
     started_at = time.time()
@@ -542,7 +543,7 @@ def execute(argv: list[str] | None = None) -> RunOutcome:
         "config": relative_path(project.source),
         "devices": [device.publication_name for device in devices],
         "tests_dir": relative_path(project.runner.tests_dir),
-        "pattern": args.pattern or project.runner.pattern,
+        "pattern": pattern,
         "validation_prs": sorted(validation_prs),
         "python": sys.version,
         "test_code": {
@@ -556,7 +557,6 @@ def execute(argv: list[str] | None = None) -> RunOutcome:
     )
 
     combined = unittest.TestSuite()
-    pattern = args.pattern or project.runner.pattern
     for device in devices:
         combined.addTests(
             _load_device_suite(

@@ -6,6 +6,7 @@ slices, not source-directory mirrors.
 | Area | Feature | Lifecycle | Link | Summary |
 |---|---|---|---|---|
 | `test-runner` | Configuration and selection | supported | [SPEC.md](test-runner/configuration-and-selection/SPEC.md) | Resolve runner profiles, devices, tests, environment values, and opt-in validation cases. |
+| `test-runner` | Module catalog | supported | [SPEC.md](test-runner/module-catalog/SPEC.md) | Publish bounded machine-readable test modules and portable options for central gate configuration. |
 | `test-runner` | Lifecycle and cleanup | supported | [SPEC.md](test-runner/lifecycle-and-cleanup/SPEC.md) | Own a failure-safe device lifecycle with verified mutable-state restoration. |
 | `test-runner` | Device capability contract | supported | [SPEC.md](test-runner/device-capability-contract/SPEC.md) | Let generic tests target normalized capabilities instead of miner models. |
 | `test-runner` | ESP-Miner device adapters | supported | [SPEC.md](test-runner/esp-miner-device-adapters/SPEC.md) | Adapt Bonanza 1002 and Gamma 602 AxeOS behavior into common contracts. |

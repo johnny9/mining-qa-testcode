@@ -20,6 +20,48 @@ from miner_testcode.runner import build_parser, execute
 
 
 class ConfigTest(unittest.TestCase):
+    def test_portable_module_options_overlay_only_selected_test_settings(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "config.toml"
+            path.write_text(
+                """
+[[devices]]
+name = "test-device"
+type = "bitaxe_bonanza"
+
+[tests.public_pool_smoke]
+stable_samples = 10
+host = "private-pool.example"
+
+[tests.stratum_v1_regression]
+extranonce2_size = 8
+""",
+                encoding="utf-8",
+            )
+            selection = json.dumps(
+                {
+                    "schema_version": 1,
+                    "module_id": "public_pool_smoke",
+                    "values": {"stable_samples": 4},
+                }
+            )
+            with mock.patch.dict(
+                os.environ,
+                {"MINER_TEST_MODULE_OPTIONS": selection},
+                clear=False,
+            ):
+                config = load_config(path)
+
+        self.assertEqual(config.test_settings("public_pool_smoke")["stable_samples"], 4)
+        self.assertEqual(
+            config.test_settings("public_pool_smoke")["host"],
+            "private-pool.example",
+        )
+        self.assertEqual(
+            config.test_settings("stratum_v1_regression")["extranonce2_size"],
+            8,
+        )
+
     def test_loads_bounded_orchestration_metadata(self) -> None:
         with mock.patch.dict(
             os.environ,

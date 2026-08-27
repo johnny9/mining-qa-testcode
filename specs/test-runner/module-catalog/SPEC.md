@@ -1,0 +1,20 @@
+# Module catalog
+
+Publish bounded, versioned Testcode module metadata so trusted coordinators can
+build gates without importing runner code or retyping patterns and options.
+
+- **Lifecycle:** supported
+- **Owner:** test-runner maintainers
+- **Last reconciled:** 2026-08-27
+- **Spec ID:** TR-CATALOG
+
+[Intent](intent.md) · [Acceptance](acceptance.md) · [Design](design.md) ·
+[Risks](risks.md)
+
+## Changelog
+
+- 2026-08-27: Implemented and validated the strict packaged catalog, portable
+  option selection, pre-device module validation, and exact-source coordinator
+  boundary.
+- 2026-08-27: Defined the repository-scannable v1 module catalog and bounded
+  portable option override contract for Status-owned gate configuration.

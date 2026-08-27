@@ -1,0 +1,187 @@
+{
+  "schema_version": 1,
+  "modules": [
+    {
+      "id": "public_pool_smoke",
+      "name": "Public pool smoke",
+      "description": "Verify public Stratum reachability and stable healthy mining with cleanup.",
+      "test_pattern": "test_public_pool_smoke.py",
+      "required_capabilities": [
+        "http",
+        "stratum-v1"
+      ],
+      "options": [
+        {
+          "id": "min_hashrate_ghs",
+          "label": "Minimum hashrate (GH/s)",
+          "description": "Lowest healthy observed hashrate.",
+          "type": "integer",
+          "required": false,
+          "default": 100,
+          "minimum": 0,
+          "maximum": 10000000
+        },
+        {
+          "id": "max_work_age_seconds",
+          "label": "Maximum work age (seconds)",
+          "description": "Oldest work accepted as healthy.",
+          "type": "integer",
+          "required": false,
+          "default": 60,
+          "minimum": 1,
+          "maximum": 3600
+        },
+        {
+          "id": "readiness_timeout",
+          "label": "Readiness timeout (seconds)",
+          "description": "Maximum wait for stable healthy mining.",
+          "type": "integer",
+          "required": false,
+          "default": 120,
+          "minimum": 1,
+          "maximum": 3600
+        },
+        {
+          "id": "stable_samples",
+          "label": "Stable samples",
+          "description": "Consecutive healthy observations required.",
+          "type": "integer",
+          "required": false,
+          "default": 10,
+          "minimum": 1,
+          "maximum": 1000
+        },
+        {
+          "id": "minimum_job_notifications",
+          "label": "Minimum job notifications",
+          "description": "Minimum mining.notify messages required from the probe.",
+          "type": "integer",
+          "required": false,
+          "default": 1,
+          "minimum": 1,
+          "maximum": 1000
+        },
+        {
+          "id": "probe_timeout",
+          "label": "Probe timeout (seconds)",
+          "description": "Maximum independent Stratum probe duration.",
+          "type": "integer",
+          "required": false,
+          "default": 30,
+          "minimum": 1,
+          "maximum": 3600
+        },
+        {
+          "id": "require_accepted_share",
+          "label": "Require an accepted share",
+          "description": "Wait for an accepted device share after stable mining.",
+          "type": "boolean",
+          "required": false,
+          "default": false
+        },
+        {
+          "id": "accepted_share_timeout",
+          "label": "Accepted-share timeout (seconds)",
+          "description": "Maximum wait when an accepted share is required.",
+          "type": "integer",
+          "required": false,
+          "default": 300,
+          "minimum": 1,
+          "maximum": 7200
+        }
+      ]
+    },
+    {
+      "id": "stratum_v1_regression",
+      "name": "Stratum V1 regression",
+      "description": "Exercise ordered Stratum V1 negotiation, jobs, shares, reconnects, and cleanup.",
+      "test_pattern": "test_stratum_v1_regression.py",
+      "required_capabilities": [
+        "http",
+        "stratum-v1"
+      ],
+      "options": [
+        {
+          "id": "share_difficulty",
+          "label": "Initial share difficulty",
+          "description": "Difficulty used for the first deterministic job.",
+          "type": "integer",
+          "required": false,
+          "default": 256,
+          "minimum": 1,
+          "maximum": 1000000000
+        },
+        {
+          "id": "changed_difficulty",
+          "label": "Changed difficulty",
+          "description": "Different difficulty used for change handling.",
+          "type": "integer",
+          "required": false,
+          "default": 512,
+          "minimum": 1,
+          "maximum": 1000000000
+        },
+        {
+          "id": "handshake_timeout",
+          "label": "Handshake timeout (seconds)",
+          "description": "Maximum wait for negotiation and authorization.",
+          "type": "integer",
+          "required": false,
+          "default": 45,
+          "minimum": 1,
+          "maximum": 3600
+        },
+        {
+          "id": "share_timeout",
+          "label": "Share timeout (seconds)",
+          "description": "Maximum wait for a deterministic share submission.",
+          "type": "integer",
+          "required": false,
+          "default": 45,
+          "minimum": 1,
+          "maximum": 3600
+        },
+        {
+          "id": "accept_timeout",
+          "label": "Acceptance timeout (seconds)",
+          "description": "Maximum wait for accepted-share state propagation.",
+          "type": "integer",
+          "required": false,
+          "default": 20,
+          "minimum": 1,
+          "maximum": 3600
+        },
+        {
+          "id": "reconnect_timeout",
+          "label": "Reconnect timeout (seconds)",
+          "description": "Maximum wait for the miner to reconnect.",
+          "type": "integer",
+          "required": false,
+          "default": 45,
+          "minimum": 1,
+          "maximum": 3600
+        },
+        {
+          "id": "invalid_submit_window",
+          "label": "Invalid-submit observation window (seconds)",
+          "description": "Observation window for rejected malformed work.",
+          "type": "integer",
+          "required": false,
+          "default": 3,
+          "minimum": 1,
+          "maximum": 300
+        },
+        {
+          "id": "extranonce2_size",
+          "label": "Extranonce2 bytes",
+          "description": "Negotiated extranonce2 byte length.",
+          "type": "integer",
+          "required": false,
+          "default": 8,
+          "minimum": 1,
+          "maximum": 32
+        }
+      ]
+    }
+  ]
+}
