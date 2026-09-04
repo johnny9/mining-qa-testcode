@@ -5,7 +5,8 @@
 - [x] **TR-EVIDENCE-AC-01:** Every run and test receives a unique bounded
   artifact scope with structured metadata and results.
 - [x] **TR-EVIDENCE-AC-02:** Recursive privacy formatting redacts configured
-  secrets and private identity from strings and nested payloads.
+  secrets, private identities, and stable pool trust identifiers from strings
+  and nested payloads.
 - [x] **TR-EVIDENCE-AC-03:** Device addresses and serial paths are represented
   by stable configured labels in publication data.
 - [x] **TR-EVIDENCE-AC-04:** Provenance records exact repository origin, HEAD,
@@ -31,6 +32,9 @@
 
 ## Verification evidence
 
+- `tests.unit.test_bonanza_lifecycle` proves flat and multi-pool baseline
+  artifacts omit SV2 authority public keys while exact in-memory values remain
+  restorable; reconciled 2026-09-04.
 - `tests.unit.test_redaction`, `tests.unit.test_provenance`,
   `tests.unit.test_runner`, `tests.unit.test_config`, and API-interface tests
   cover the core transformations, pre-hardware source guard, and artifact

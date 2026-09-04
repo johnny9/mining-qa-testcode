@@ -30,6 +30,7 @@
 | Invalid/sanitized baseline | Placeholder written to device | Marker validator | Fail before mutation and repair from an operator-controlled source |
 | Unknown write-only password | Cannot restore original | Configuration precondition | Refuse password mutation |
 | Restart never returns | Device unavailable | Online timeout | Record cleanup error; operator recovery |
+| Transient read looks like reboot | Test sends work to a stale session | Reboot generation and uptime-progress checks | Require two matching post-reboot observations |
 | Partial restore | Wrong pool/pause state | Final reread mismatch | Fail test and preserve evidence |
 | Close hides restore failure | False success | Independent cleanup aggregation | Report all errors |
 

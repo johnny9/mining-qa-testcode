@@ -30,6 +30,10 @@
 - `tests.unit.test_api` — read-only transport boundary; reconciled 2026-08-10.
 - `tests.unit.test_stratum` — real loopback Stratum handshake/job behavior;
   reconciled 2026-08-10.
+- `tests.unit.test_fake_stratum_v2` — official-vector crypto compatibility and
+  bounded authenticated loopback framing, channel, job, share, rejection,
+  reconnect, malformed-input, privacy, and shutdown behavior; reconciled
+  2026-09-04.
 - `tests.unit.test_bitaxe_state` — WebSocket diff and fallback normalization;
   reconciled 2026-08-10.
 - Live serial criterion is unchecked for this documentation iteration.

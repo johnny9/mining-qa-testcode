@@ -30,6 +30,9 @@ _RESTORABLE_POOL_FIELDS = (
     "stratumTLS",
     "stratumExtranonceSubscribe",
     "stratumDecodeCoinbase",
+    "stratumV2ChannelType",
+    "stratumV2AuthorityPubkey",
+    "stratumV2RequireAuth",
 )
 
 _POOL_SELECTION_FIELDS = (
@@ -37,6 +40,14 @@ _POOL_SELECTION_FIELDS = (
     "secondaryPoolIndex",
     "useFallbackStratum",
 )
+
+_SV2_POOL_FIELDS = (
+    "stratumV2ChannelType",
+    "stratumV2AuthorityPubkey",
+    "stratumV2RequireAuth",
+)
+
+_RESTART_BOOT_TIME_TOLERANCE_SECONDS = 2.0
 
 _MASKED_STRATUM_PASSWORD = "*****"
 _REDACTED_POOL_IDENTITIES = frozenset(
@@ -173,6 +184,7 @@ class BitaxeDevice(MiningDevice):
             caps.OTA_UPGRADE,
             caps.POOL_CONFIG,
             caps.STRATUM_V1,
+            caps.STRATUM_V2,
             caps.TELEMETRY,
         }
         if self.serial is not None:
@@ -491,7 +503,11 @@ class BitaxeDevice(MiningDevice):
 
     @staticmethod
     def _redacted_pool_settings(value: Any, *, key: str | None = None) -> Any:
-        if key in {"stratumUser", "stratumPassword"}:
+        if key in {
+            "stratumUser",
+            "stratumPassword",
+            "stratumV2AuthorityPubkey",
+        }:
             return "<redacted>"
         if isinstance(value, Mapping):
             return {
@@ -538,11 +554,35 @@ class BitaxeDevice(MiningDevice):
         cls, pools: list[dict[str, Any]], primary_pool_index: Any
     ) -> dict[str, Any]:
         _, primary_pool = cls._primary_pool(pools, primary_pool_index)
-        return {
+        expected = {
             key: primary_pool[key]
             for key in _RESTORABLE_POOL_FIELDS
             if key in primary_pool
         }
+        if str(expected.get("stratumProtocol", "SV1")).upper() != "SV2":
+            for key in _SV2_POOL_FIELDS:
+                expected.pop(key, None)
+        return expected
+
+    @classmethod
+    def _settings_match(
+        cls, info: Mapping[str, Any], expected: Mapping[str, Any]
+    ) -> bool:
+        primary_pool: Mapping[str, Any] = {}
+        pools = cls._pool_entries(info)
+        if pools is not None:
+            _, primary_pool = cls._primary_pool(
+                pools, info.get("primaryPoolIndex", 0)
+            )
+        return all(
+            (
+                info[key]
+                if key in info
+                else primary_pool.get(key)
+            )
+            == value
+            for key, value in expected.items()
+        )
 
     async def restore_clean_state(self, baseline: CleanState) -> None:
         self.logger.info("restoring clean state for %s", self.name)
@@ -641,14 +681,38 @@ class BitaxeDevice(MiningDevice):
         self._reject_redacted_pool_identities(
             {"stratumUser": pool.username}, context="test pool configuration"
         )
+        protocol = pool.protocol.strip().upper()
+        if protocol not in {"SV1", "SV2"}:
+            raise DeviceError("pool protocol must be SV1 or SV2")
+        if protocol == "SV1" and any(
+            value is not None
+            for value in (
+                pool.sv2_channel_type,
+                pool.sv2_authority_pubkey,
+                pool.sv2_require_auth,
+            )
+        ):
+            raise DeviceError("SV2 pool settings require protocol='SV2'")
+
         info = await self.current_info()
         desired: dict[str, Any] = {
             "stratumURL": pool.host,
             "stratumPort": pool.port,
             "stratumUser": pool.username,
-            "stratumProtocol": "SV1",
+            "stratumProtocol": protocol,
             "stratumTLS": 1 if pool.tls else 0,
         }
+        if protocol == "SV2":
+            channel_type = (pool.sv2_channel_type or "extended").strip().lower()
+            if channel_type not in {"standard", "extended"}:
+                raise DeviceError(
+                    "SV2 channel type must be 'standard' or 'extended'"
+                )
+            desired["stratumV2ChannelType"] = channel_type
+            if pool.sv2_authority_pubkey is not None:
+                desired["stratumV2AuthorityPubkey"] = pool.sv2_authority_pubkey
+            if pool.sv2_require_auth is not None:
+                desired["stratumV2RequireAuth"] = pool.sv2_require_auth
         if pool.password is not None:
             if self._known_baseline_password is None:
                 raise DeviceError(
@@ -695,7 +759,15 @@ class BitaxeDevice(MiningDevice):
         await self._restart_and_wait(expected=expected)
 
     async def _restart_and_wait(self, *, expected: Mapping[str, Any]) -> Mapping[str, Any]:
-        old_uptime = self.state.latest.uptime_seconds
+        loop = asyncio.get_running_loop()
+        before = await self.current_info()
+        raw_old_uptime = before.get("uptimeSeconds")
+        old_uptime = (
+            int(raw_old_uptime) if raw_old_uptime is not None else None
+        )
+        old_boot_time = (
+            loop.time() - old_uptime if old_uptime is not None else None
+        )
         try:
             await self.api.post_json("/api/system/restart")
         except InterfaceError as exc:
@@ -705,6 +777,7 @@ class BitaxeDevice(MiningDevice):
         deadline = asyncio.get_running_loop().time() + self.online_timeout
         saw_offline = False
         last_error: Exception | None = None
+        restart_candidate: tuple[float, int | None] | None = None
         while asyncio.get_running_loop().time() < deadline:
             await asyncio.sleep(0.5)
             try:
@@ -712,11 +785,35 @@ class BitaxeDevice(MiningDevice):
             except Exception as exc:
                 saw_offline = True
                 last_error = exc
+                restart_candidate = None
                 continue
-            uptime = int(info.get("uptimeSeconds") or 0)
-            restarted = saw_offline or old_uptime is None or uptime < old_uptime
-            matches = all(info.get(key) == value for key, value in expected.items())
-            if restarted and matches:
+            raw_uptime = info.get("uptimeSeconds")
+            uptime = int(raw_uptime) if raw_uptime is not None else None
+            if old_uptime is None or uptime is None:
+                restarted = saw_offline
+            else:
+                boot_time_advanced = (
+                    loop.time() - uptime
+                    >= old_boot_time + _RESTART_BOOT_TIME_TOLERANCE_SECONDS
+                )
+                restarted = (
+                    uptime < old_uptime
+                    or boot_time_advanced
+                    or (saw_offline and old_uptime <= 1 and uptime <= old_uptime)
+                )
+            matches = self._settings_match(info, expected)
+            if not matches:
+                restart_candidate = None
+                continue
+            if restart_candidate is None:
+                if restarted:
+                    restart_candidate = (loop.time(), uptime)
+                continue
+            candidate_at, candidate_uptime = restart_candidate
+            if uptime is None or candidate_uptime is None:
+                if loop.time() - candidate_at >= 1.0:
+                    return info
+            elif uptime != candidate_uptime:
                 return info
         raise DeviceError(
             f"{self.name} did not return with expected settings after restart; "

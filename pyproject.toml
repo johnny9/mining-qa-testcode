@@ -19,6 +19,7 @@ classifiers = [
   "Topic :: Software Development :: Testing",
 ]
 dependencies = [
+  "cryptography>=46,<51",
   "websockets>=14,<16",
 ]
 

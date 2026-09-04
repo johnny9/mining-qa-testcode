@@ -86,7 +86,7 @@ result pointer and keeps a verified local artifact copy.
 - [User guide](docs/USER_GUIDE.md): configure devices, run tests, and understand
   local output.
 - [Stratum tests](docs/STRATUM_TESTS.md): run the public-pool smoke test and
-  local Stratum V1 regressions.
+  local Stratum V1/V2 regressions.
 - [Publishing guide](docs/PUBLISHING.md): configure local, GitHub, and Mining QA
   Status results.
 - [Orchestration v1](contracts/orchestration-v1.md) and

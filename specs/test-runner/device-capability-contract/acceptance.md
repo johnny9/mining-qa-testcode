@@ -25,6 +25,9 @@
 
 ## Verification evidence
 
+- `tests.unit.test_bonanza_lifecycle` covers SV1-default compatibility,
+  invalid protocol/channel rejection, and SV2 pool settings; reconciled
+  2026-09-04.
 - `tests.unit.test_bitaxe_state` — inheritance, identity, lifecycle, and state
   normalization; reconciled 2026-08-10.
 - Runner/testcase unit coverage in the full suite verifies pre-start selection

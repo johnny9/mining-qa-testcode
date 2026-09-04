@@ -1,12 +1,13 @@
 # Stratum test guide
 
-`mining-qa-testcode` provides two kinds of Stratum V1 tests:
+`mining-qa-testcode` provides public-pool Stratum V1 coverage and local
+Stratum V1/V2 regression suites:
 
 - the public-pool smoke test checks normal mining against a real pool;
 - the local regression suite checks the miner's Stratum client with a fake pool
   on the test host.
 
-Both tests collect device state, telemetry, logs, and share evidence.
+All suites collect device state, telemetry, logs, and share evidence.
 
 ## Public-pool smoke test
 
@@ -135,6 +136,42 @@ write, and `send_raw()` for controlled framing input. The wait methods provide
 synchronization without adding arbitrary sleeps.
 
 Each run saves a redacted `fake-stratum.jsonl`.
+
+## Local Stratum V2 regression suite
+
+The V2 suite follows the same lifecycle as the V1 suite, but starts an
+encrypted binary fake pool. It creates an ephemeral authority key and
+certificate for the run and configures the miner to authenticate that key.
+No pool password is needed or changed.
+
+```toml
+[tests.stratum_v2_regression]
+advertised_host = "192.168.1.10"
+bind_host = "0.0.0.0"
+port = 0
+username = "stratum-v2-regression.worker"
+channel_type = "extended"
+share_difficulty = 256
+changed_difficulty = 512
+```
+
+Use `channel_type = "standard"` to exercise a standard mining channel. Run
+only this module with:
+
+```bash
+miner-test --config config.local.toml \
+  --pattern 'test_stratum_v2_regression.py'
+```
+
+The ordered checks cover the authenticated Noise handshake,
+`SetupConnection`, channel opening, future-job activation, accepted and
+rejected submissions, a target change, and a fresh authenticated connection
+after the server disconnects the miner. The runner restores the captured V1
+or V2 protocol, channel, authority, and authentication fields during cleanup.
+
+Each run saves `fake-stratum-v2.jsonl`. The bounded transcript records decoded
+message metadata but redacts endpoint coordinates, device identifiers, and
+mining identities; it never contains traffic ciphertext or private keys.
 
 ## Add chart markers
 

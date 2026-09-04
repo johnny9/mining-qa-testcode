@@ -23,6 +23,10 @@ class PoolSettings:
     password: str | None = None
     suggested_difficulty: int | None = None
     tls: bool = False
+    protocol: str = "SV1"
+    sv2_channel_type: str | None = None
+    sv2_authority_pubkey: str | None = None
+    sv2_require_auth: bool | None = None
 
 
 class MiningDevice(abc.ABC):

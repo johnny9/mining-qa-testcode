@@ -33,7 +33,9 @@
   `snapshot_clean_state`, `restore_clean_state`, `configure_pool`,
   `current_info`, `wait_for_stable_state`, `save_device_logs`, and `close`.
 - Each adapter exposes `name`, `capabilities`, `state`, and `telemetry`.
-- `CleanState` and `PoolSettings` are portable lifecycle inputs.
+- `CleanState` and `PoolSettings` are portable lifecycle inputs. Pool settings
+  default to SV1 and expose optional SV2 channel, authority, and authentication
+  fields without changing existing callers.
 
 ### HTTP or external protocols
 
@@ -50,6 +52,8 @@
 
 - Advertise a capability only when configured interfaces and implementation can
   honor it.
+- Advertise Stratum V1 and V2 independently so a protocol-specific regression
+  can skip unsupported adapters before startup.
 - Map native state into portable meanings without depending on one firmware's
   lifecycle vocabulary.
 - Identity verification precedes mutation.

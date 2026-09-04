@@ -18,12 +18,26 @@ class ModuleCatalogTest(unittest.TestCase):
 
         self.assertEqual(
             [module.id for module in catalog.modules],
-            ["public_pool_smoke", "stratum_v1_regression"],
+            [
+                "public_pool_smoke",
+                "stratum_v1_regression",
+                "stratum_v2_regression",
+            ],
         )
         public_pool = catalog.module("public_pool_smoke")
         self.assertEqual(public_pool.test_pattern, "test_public_pool_smoke.py")
         self.assertEqual(public_pool.required_capabilities, ("http", "stratum-v1"))
         self.assertIn("require_accepted_share", [option.id for option in public_pool.options])
+        stratum_v2 = catalog.module("stratum_v2_regression")
+        self.assertEqual(
+            stratum_v2.test_pattern, "test_stratum_v2_regression.py"
+        )
+        self.assertEqual(stratum_v2.required_capabilities, ("http", "stratum-v2"))
+        channel_type = next(
+            option for option in stratum_v2.options if option.id == "channel_type"
+        )
+        self.assertEqual(channel_type.default, "extended")
+        self.assertEqual(channel_type.choices, ("standard", "extended"))
 
     def test_selection_accepts_only_declared_typed_bounded_values(self) -> None:
         catalog = load_module_catalog()
@@ -49,6 +63,29 @@ class ModuleCatalogTest(unittest.TestCase):
             dict(selected[1]),
             {"stable_samples": 4, "require_accepted_share": True},
         )
+
+        sv2_environment = {
+            "MINER_TEST_MODULE_OPTIONS": json.dumps(
+                {
+                    "schema_version": 1,
+                    "module_id": "stratum_v2_regression",
+                    "values": {"channel_type": "standard"},
+                }
+            )
+        }
+        sv2_selected = selected_module_options(sv2_environment, catalog)
+        self.assertIsNotNone(sv2_selected)
+        assert sv2_selected is not None
+        self.assertEqual(dict(sv2_selected[1]), {"channel_type": "standard"})
+        sv2_environment["MINER_TEST_MODULE_OPTIONS"] = json.dumps(
+            {
+                "schema_version": 1,
+                "module_id": "stratum_v2_regression",
+                "values": {"channel_type": "group"},
+            }
+        )
+        with self.assertRaises(ConfigError):
+            selected_module_options(sv2_environment, catalog)
 
         for values in (
             {"stable_samples": 0},

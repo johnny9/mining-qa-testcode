@@ -149,3 +149,19 @@ handshake_timeout = 45
 share_timeout = 45
 reconnect_timeout = 45
 accept_timeout = 20
+
+[tests.stratum_v2_regression]
+# Use the test host's LAN address. The fake listener generates a fresh
+# authority key and certificate for every run, then configures that public key
+# on the miner for authenticated Noise transport.
+advertised_host = "192.168.1.10"
+bind_host = "0.0.0.0"
+port = 0
+username = "stratum-v2-regression.worker"
+channel_type = "extended" # "standard" or "extended"
+share_difficulty = 256
+changed_difficulty = 512
+handshake_timeout = 45
+share_timeout = 45
+reconnect_timeout = 45
+accept_timeout = 20

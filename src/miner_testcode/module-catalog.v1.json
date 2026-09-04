@@ -182,6 +182,90 @@
           "maximum": 32
         }
       ]
+    },
+    {
+      "id": "stratum_v2_regression",
+      "name": "Stratum V2 regression",
+      "description": "Exercise authenticated Stratum V2 setup, channels, jobs, shares, reconnects, and cleanup.",
+      "test_pattern": "test_stratum_v2_regression.py",
+      "required_capabilities": [
+        "http",
+        "stratum-v2"
+      ],
+      "options": [
+        {
+          "id": "channel_type",
+          "label": "Mining channel type",
+          "description": "SV2 mining channel opened by the device.",
+          "type": "enum",
+          "required": false,
+          "default": "extended",
+          "choices": [
+            "standard",
+            "extended"
+          ]
+        },
+        {
+          "id": "share_difficulty",
+          "label": "Initial share difficulty",
+          "description": "Difficulty used for the first deterministic job.",
+          "type": "integer",
+          "required": false,
+          "default": 256,
+          "minimum": 1,
+          "maximum": 1000000000
+        },
+        {
+          "id": "changed_difficulty",
+          "label": "Changed difficulty",
+          "description": "Different difficulty used for target-change handling.",
+          "type": "integer",
+          "required": false,
+          "default": 512,
+          "minimum": 1,
+          "maximum": 1000000000
+        },
+        {
+          "id": "handshake_timeout",
+          "label": "Handshake timeout (seconds)",
+          "description": "Maximum wait for Noise, setup, and channel negotiation.",
+          "type": "integer",
+          "required": false,
+          "default": 45,
+          "minimum": 1,
+          "maximum": 3600
+        },
+        {
+          "id": "share_timeout",
+          "label": "Share timeout (seconds)",
+          "description": "Maximum wait for an encrypted share submission.",
+          "type": "integer",
+          "required": false,
+          "default": 45,
+          "minimum": 1,
+          "maximum": 3600
+        },
+        {
+          "id": "accept_timeout",
+          "label": "Response timeout (seconds)",
+          "description": "Maximum wait for share response state propagation.",
+          "type": "integer",
+          "required": false,
+          "default": 20,
+          "minimum": 1,
+          "maximum": 3600
+        },
+        {
+          "id": "reconnect_timeout",
+          "label": "Reconnect timeout (seconds)",
+          "description": "Maximum wait for a fresh authenticated connection.",
+          "type": "integer",
+          "required": false,
+          "default": 45,
+          "minimum": 1,
+          "maximum": 3600
+        }
+      ]
     }
   ]
 }

@@ -37,6 +37,10 @@
 
 - AxeOS `/api/system/info`, settings PATCH, pause/resume/restart, OTA, and log
   endpoints.
+- Pool configuration maps SV1/SV2 selection and optional SV2 channel,
+  authority, and authentication fields into AxeOS system or `pools[]` payloads.
+- Restart verification falls back to the selected primary pool when a modern
+  pool field has no flat AxeOS alias.
 - AxeOS `/api/ws/live` update diffs when enabled.
 - ESP USB serial for capture and optional shell-free flash command.
 
@@ -55,6 +59,8 @@
 - Pool comparison masks write-only passwords but does not mask identities in
   the in-memory restore baseline.
 - Multi-pool IDs and primary/secondary selection survive cleanup.
+- Protocol, SV2 channel, authority key, and authentication requirement survive
+  cleanup for flat and multi-pool schemas.
 - Gamma standard telemetry works without Bonanza health extensions.
 
 ### Forbidden behavior
@@ -81,12 +87,15 @@
 - Optional telemetry failure → log once and continue REST polling.
 - Required telemetry timeout → device error.
 - Restart disconnect → treat as possibly honored, then verify reboot/settings.
+- Transient reads and pre-reboot zero uptime do not establish restart
+  completion; require a later matching sample with uptime progress.
 - Restore mismatch → cleanup error with bounded mismatch detail.
 
 ## Compatibility and migration
 
-- Both flat legacy fields and modern `pools[]` are supported. Schema changes
-  need fixture coverage before HIL.
+- Both flat legacy fields and modern `pools[]` are supported. Existing pool
+  callers remain SV1 by default. Schema changes need fixture coverage before
+  HIL.
 
 ## Resource and operational constraints
 

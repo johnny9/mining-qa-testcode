@@ -5,7 +5,7 @@ without publishing secrets, payout identities, or sensitive local coordinates.
 
 - **Lifecycle:** supported
 - **Owner:** hardware-test maintainers
-- **Last reconciled:** 2026-08-26
+- **Last reconciled:** 2026-09-04
 - **Spec ID:** TR-EVIDENCE
 
 [Intent](intent.md) · [Acceptance](acceptance.md) · [Design](design.md) ·
@@ -13,6 +13,8 @@ without publishing secrets, payout identities, or sensitive local coordinates.
 
 ## Changelog
 
+- 2026-09-04: Redacted SV2 authority public keys from saved pool-baseline
+  evidence while retaining them only in memory for restoration.
 - 2026-08-26: Registered configured API, WebSocket, and serial coordinates as
   run-scoped private replacements and added fail-closed `.local` hostname
   redaction after a representative Gamma HIL artifact audit found a leak.

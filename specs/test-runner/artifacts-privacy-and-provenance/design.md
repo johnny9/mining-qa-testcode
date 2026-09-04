@@ -59,6 +59,9 @@
   serial device paths.
 - Known secrets and payout identities are redacted recursively in strings and
   structured payloads before persistence/publication.
+- Pool baseline evidence also redacts SV2 authority public keys because they
+  are stable endpoint trust identifiers; the in-memory restore source is not
+  altered.
 - Configured device endpoints are replaced consistently, and independently
   recognized `.local` hostnames are rejected from sanitized public logs.
 - Provenance distinguishes origin URL, exact HEAD SHA, working-tree state, and

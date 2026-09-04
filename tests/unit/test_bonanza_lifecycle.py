@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 import tempfile
@@ -29,6 +30,9 @@ class FakeApi:
             "stratumTLS": 0,
             "stratumExtranonceSubscribe": False,
             "stratumDecodeCoinbase": True,
+            "stratumV2ChannelType": "extended",
+            "stratumV2AuthorityPubkey": "old-authority-key",
+            "stratumV2RequireAuth": False,
             "miningPaused": False,
             "uptimeSeconds": 100,
             "asicHealth": {"lifecycle": "MINING", "lastFaultCode": 0},
@@ -69,6 +73,9 @@ class FakePoolsApi(FakeApi):
                         "stratumTLS": 0,
                         "stratumExtranonceSubscribe": False,
                         "stratumDecodeCoinbase": True,
+                        "stratumV2ChannelType": "extended",
+                        "stratumV2AuthorityPubkey": "old-primary-authority",
+                        "stratumV2RequireAuth": False,
                     },
                     {
                         "id": 1,
@@ -81,6 +88,9 @@ class FakePoolsApi(FakeApi):
                         "stratumTLS": 0,
                         "stratumExtranonceSubscribe": False,
                         "stratumDecodeCoinbase": True,
+                        "stratumV2ChannelType": "standard",
+                        "stratumV2AuthorityPubkey": "old-backup-authority",
+                        "stratumV2RequireAuth": True,
                     },
                 ],
                 "primaryPoolIndex": 0,
@@ -114,6 +124,36 @@ class FakePoolsApi(FakeApi):
         return b""
 
 
+class DelayedRestartApi(FakeApi):
+    def __init__(self) -> None:
+        super().__init__()
+        self.restart_requested = False
+        self.transient_injected = False
+        self.rebooted = False
+        self.restart_task: asyncio.Task[None] | None = None
+
+    async def get_json(self, path: str) -> dict[str, Any]:
+        if self.restart_requested and not self.transient_injected:
+            self.transient_injected = True
+            raise TimeoutError("transient API timeout before delayed reboot")
+        if self.restart_requested and not self.rebooted:
+            result = dict(self.info)
+            result["uptimeSeconds"] = 0
+            return result
+        return await super().get_json(path)
+
+    async def post_json(self, path: str, value=None) -> bytes:
+        if path == "/api/system/restart":
+            self.restart_requested = True
+            self.restart_task = asyncio.create_task(self._complete_restart())
+        return b"{}"
+
+    async def _complete_restart(self) -> None:
+        await asyncio.sleep(1.1)
+        self.info["uptimeSeconds"] = 0
+        self.rebooted = True
+
+
 class BonanzaLifecycleTest(unittest.IsolatedAsyncioTestCase):
     def make_device(
         self, directory: str, artifacts: TestArtifacts, *, name: str
@@ -130,6 +170,46 @@ class BonanzaLifecycleTest(unittest.IsolatedAsyncioTestCase):
             project_dir=Path(directory),
             artifacts=artifacts,
             logger=logging.getLogger(name),
+        )
+
+    async def test_restart_wait_does_not_treat_transient_timeout_as_reboot(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            artifacts = TestArtifacts.create(Path(directory) / "case")
+            device = self.make_device(
+                directory, artifacts, name="test-delayed-restart"
+            )
+            fake_api = DelayedRestartApi()
+            device.api = fake_api  # type: ignore[assignment]
+
+            await device._restart_and_wait(expected={"stratumURL": "old.pool"})
+
+            self.assertTrue(fake_api.rebooted)
+            self.assertIsNotNone(fake_api.restart_task)
+
+    def test_sv1_restart_expectation_ignores_sv2_only_aliases(self) -> None:
+        fake_api = FakePoolsApi()
+
+        expected = BitaxeBonanzaDevice._pool_expected_settings(
+            fake_api.info["pools"], fake_api.info["primaryPoolIndex"]
+        )
+
+        self.assertEqual(expected["stratumProtocol"], "SV1")
+        self.assertNotIn("stratumV2ChannelType", expected)
+        self.assertNotIn("stratumV2AuthorityPubkey", expected)
+        self.assertNotIn("stratumV2RequireAuth", expected)
+
+    def test_restart_expectation_falls_back_to_primary_pool_fields(self) -> None:
+        fake_api = FakePoolsApi()
+        fake_api.info["pools"][0]["stratumV2RequireAuth"] = True
+        fake_api.info.pop("stratumV2RequireAuth")
+
+        self.assertTrue(
+            BitaxeBonanzaDevice._settings_match(
+                fake_api.info,
+                {"stratumV2RequireAuth": True},
+            )
         )
 
     async def test_rejects_redacted_identity_in_device_baseline(self) -> None:
@@ -212,6 +292,10 @@ class BonanzaLifecycleTest(unittest.IsolatedAsyncioTestCase):
                     host="new.pool",
                     port=5555,
                     username="new.worker",
+                    protocol="SV2",
+                    sv2_channel_type="standard",
+                    sv2_authority_pubkey="ephemeral-authority-key",
+                    sv2_require_auth=True,
                 )
             )
 
@@ -221,6 +305,12 @@ class BonanzaLifecycleTest(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(configured["stratumURL"], "new.pool")
             self.assertEqual(configured["stratumPort"], 5555)
             self.assertEqual(configured["stratumPassword"], "*****")
+            self.assertEqual(configured["stratumProtocol"], "SV2")
+            self.assertEqual(configured["stratumV2ChannelType"], "standard")
+            self.assertEqual(
+                configured["stratumV2AuthorityPubkey"], "ephemeral-authority-key"
+            )
+            self.assertTrue(configured["stratumV2RequireAuth"])
             self.assertEqual(fake_api.info["stratumURL"], "new.pool")
             self.assertEqual(fake_api.info["stratumPort"], 5555)
 
@@ -230,6 +320,12 @@ class BonanzaLifecycleTest(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(len(restored), 2)
             self.assertEqual(restored[0]["stratumURL"], "old.pool")
             self.assertEqual(restored[0]["stratumPort"], 3333)
+            self.assertEqual(restored[0]["stratumProtocol"], "SV1")
+            self.assertEqual(restored[0]["stratumV2ChannelType"], "extended")
+            self.assertEqual(
+                restored[0]["stratumV2AuthorityPubkey"], "old-primary-authority"
+            )
+            self.assertFalse(restored[0]["stratumV2RequireAuth"])
             self.assertEqual(restored[1]["stratumURL"], "backup.pool")
             self.assertEqual(fake_api.info["stratumURL"], "old.pool")
             self.assertEqual(fake_api.info["stratumPort"], 3333)
@@ -240,6 +336,80 @@ class BonanzaLifecycleTest(unittest.IsolatedAsyncioTestCase):
             baseline_artifact = (artifacts.path / "baseline.json").read_text()
             self.assertNotIn("old.worker", baseline_artifact)
             self.assertNotIn("backup.worker", baseline_artifact)
+            self.assertNotIn("old-primary-authority", baseline_artifact)
+            self.assertNotIn("old-backup-authority", baseline_artifact)
+
+    async def test_flat_pool_schema_configures_sv2_and_restores_all_fields(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            artifacts = TestArtifacts.create(Path(directory) / "case")
+            device = self.make_device(directory, artifacts, name="test-flat-sv2")
+            fake_api = FakeApi()
+            device.api = fake_api  # type: ignore[assignment]
+
+            baseline = await device.snapshot_clean_state()
+            baseline_artifact = (artifacts.path / "baseline.json").read_text()
+            self.assertNotIn("old-authority-key", baseline_artifact)
+            await device.configure_pool(
+                PoolSettings(
+                    host="sv2.pool",
+                    port=3336,
+                    username="sv2.worker",
+                    protocol="sv2",
+                    sv2_channel_type="standard",
+                    sv2_authority_pubkey="ephemeral-authority-key",
+                    sv2_require_auth=True,
+                )
+            )
+
+            configured = fake_api.patches[0]
+            self.assertEqual(configured["stratumProtocol"], "SV2")
+            self.assertEqual(configured["stratumV2ChannelType"], "standard")
+            self.assertEqual(
+                configured["stratumV2AuthorityPubkey"], "ephemeral-authority-key"
+            )
+            self.assertTrue(configured["stratumV2RequireAuth"])
+
+            await device.restore_clean_state(baseline)
+
+            restored = fake_api.patches[-1]
+            self.assertEqual(restored["stratumProtocol"], "SV1")
+            self.assertEqual(restored["stratumV2ChannelType"], "extended")
+            self.assertEqual(
+                restored["stratumV2AuthorityPubkey"], "old-authority-key"
+            )
+            self.assertFalse(restored["stratumV2RequireAuth"])
+
+    async def test_pool_protocol_validation_happens_without_api_writes(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            artifacts = TestArtifacts.create(Path(directory) / "case")
+            device = self.make_device(directory, artifacts, name="test-sv2-validation")
+            fake_api = FakeApi()
+            device.api = fake_api  # type: ignore[assignment]
+
+            invalid = (
+                PoolSettings("pool", 3333, "worker", protocol="SV3"),
+                PoolSettings(
+                    "pool",
+                    3333,
+                    "worker",
+                    protocol="SV2",
+                    sv2_channel_type="group",
+                ),
+                PoolSettings(
+                    "pool",
+                    3333,
+                    "worker",
+                    protocol="SV1",
+                    sv2_channel_type="standard",
+                ),
+            )
+            for settings in invalid:
+                with self.subTest(settings=settings), self.assertRaises(DeviceError):
+                    await device.configure_pool(settings)
+
+            self.assertEqual(fake_api.patches, [])
 
     async def test_restores_write_only_password_from_environment_baseline(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

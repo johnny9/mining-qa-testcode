@@ -28,11 +28,11 @@
 
 ## Verification evidence
 
-- The complete Testcode unit suite passed all 90 tests on 2026-08-27. Focused
+- The complete Testcode unit suite passed all 99 tests on 2026-09-04. Focused
   catalog tests cover loading, duplicate/private option rejection, typed
   bounds, profile overlay, and selected-module pattern validation before
   device construction.
-- Wheel and sdist builds passed and both include
+- Wheel and sdist builds passed on 2026-09-04 and both include
   `miner_testcode/module-catalog.v1.json`. Status independently reads the same
   strict public shape at an exact Testcode commit, while Lab and Testcode tests
   cover the bounded selection handoff and provenance-drift rejection.

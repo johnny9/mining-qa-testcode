@@ -8,7 +8,8 @@
   telemetry, OTA, serial, logs, restart, and cleanup capabilities only when
   configured.
 - [x] **TR-BITAXE-AC-03:** Legacy and multi-pool schemas configure and restore
-  equivalent values without writing masked credentials or redaction markers.
+  equivalent SV1/SV2 pool, protocol, channel, authority, and authentication
+  values without writing masked credentials or redaction markers.
 - [x] **TR-BITAXE-AC-04:** Gamma normalizes portable mining state without
   Bonanza-only lifecycle fields.
 
@@ -30,9 +31,13 @@
 
 - `tests.unit.test_bitaxe_state` — identity, inheritance, WebSocket diffs, and
   normalized state; reconciled 2026-08-10.
-- `tests.unit.test_bonanza_lifecycle` — pool and cleanup contracts; reconciled
-  2026-08-10.
-- Current HIL was not run for this documentation iteration.
+- `tests.unit.test_bonanza_lifecycle` — pool protocol validation plus flat and
+  multi-pool SV2 configuration/cleanup contracts, delayed reboot detection,
+  and primary-pool alias fallback; reconciled 2026-09-04.
+- Authorized Gamma 602/BM1370 HIL on 2026-09-04 confirmed exact identity,
+  serial capture, REST telemetry fallback, SV1/SV2 pool mutation, restoration,
+  and healthy mining on PR 1897 firmware `1c44a87`. AC-08 remains unchecked
+  because Bonanza 1002 was not exercised.
 
 ## Acceptance rule
 

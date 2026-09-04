@@ -8,6 +8,7 @@
 | WebSocket | Bound connection and messages, ping, expose parsed JSON stream | `src/miner_testcode/interfaces/websocket.py` |
 | ESP serial | Resolve stable paths, capture bounded lifecycle evidence, optional shell-free flash | `src/miner_testcode/interfaces/serial.py` |
 | Stratum probe | Bounded subscribe/authorize/job observation | `src/miner_testcode/interfaces/stratum.py` |
+| Stratum V2 fake server | Terminate authenticated Noise and exchange bounded encrypted mining frames | `src/miner_testcode/interfaces/fake_stratum_v2.py` |
 
 ## Interfaces and contracts
 
@@ -30,13 +31,14 @@
 
 ### Python API
 
-- `HttpApiInterface`, `JsonWebSocketInterface`, `EspSerialInterface`, and
-  `StratumV1Probe` expose async adapter-facing operations.
+- `HttpApiInterface`, `JsonWebSocketInterface`, `EspSerialInterface`,
+  `StratumV1Probe`, and `FakeStratumV2Server` expose bounded async operations.
 
 ### HTTP or external protocols
 
 - HTTP(S) JSON and binary upload; WebSocket JSON messages; USB serial byte
-  stream; Stratum V1 newline-delimited JSON-RPC over TCP/TLS.
+  stream; Stratum V1 newline-delimited JSON-RPC over TCP/TLS; authenticated
+  Stratum V2 binary mining frames over Noise.
 
 ### Files, artifacts, payloads, and persistent state
 
@@ -61,6 +63,8 @@
 - No request/response bodies or credentials in generic API traces.
 - No ambiguous serial wildcard selection.
 - No unbounded WebSocket/Stratum line or message accumulation.
+- No unauthenticated, oversized, or truncated SV2 frame may become protocol
+  evidence.
 
 ## Data and state
 
@@ -101,9 +105,11 @@
 | [Firmware lifecycle](../firmware-lifecycle/SPEC.md) | Uses bounded binary upload or serial command. |
 | [State, telemetry, and charting](../state-telemetry-and-charting/SPEC.md) | Consumes API/WebSocket observations and gaps. |
 | [Public pool smoke](../public-pool-smoke/SPEC.md) | Uses independent Stratum probe. |
+| [Stratum V2 regression](../stratum-v2-regression/SPEC.md) | Owns the authenticated fake-server scenarios and transcript contract. |
 
 ## Verification approach
 
 - Unit tests exercise read-only preconnection rejection, transient/error bounds,
-  WebSocket diff consumers, and Stratum handshake/job behavior. Live serial and
-  embedded-server behavior require explicit target checks.
+  WebSocket diff consumers, Stratum V1 handshake/job behavior, and encrypted
+  SV2 authentication/framing. Live serial and embedded-device behavior require
+  explicit target checks.

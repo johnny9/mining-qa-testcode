@@ -33,11 +33,15 @@
   `snapshot_clean_state()`, `restore_clean_state()`, `save_device_logs()`, and
   `close()` are lifecycle extension points.
 - `CleanState.settings` and `mining_paused` are the captured mutable contract.
+  Pool state includes protocol-specific SV2 channel, authority, and
+  authentication values when exposed by the device.
 
 ### HTTP or external protocols
 
 - Adapter restore uses native device APIs. A restart is followed by bounded
-  online and expected-setting verification.
+  reboot and expected-setting verification. Transient read failure or a
+  pre-reboot zero-uptime response is not sufficient proof; readiness requires
+  a second matching observation with uptime progress.
 
 ### Files, artifacts, payloads, and persistent state
 
@@ -54,6 +58,8 @@
 - Target firmware is the run baseline; mutable settings are the per-test
   cleanup baseline.
 - Restore is verified by rereading device state.
+- Expected fields use flat API aliases when present and otherwise fall back to
+  the selected primary `pools[]` object.
 - Restore, log collection, and close all run even when another cleanup step
   fails.
 
@@ -88,7 +94,8 @@
 ## Compatibility and migration
 
 - Adapters may support both flat and multi-pool APIs, but each must preserve the
-  same clean-state semantics.
+  same clean-state semantics, including removal or restoration of temporary
+  SV2 trust and channel settings.
 
 ## Resource and operational constraints
 

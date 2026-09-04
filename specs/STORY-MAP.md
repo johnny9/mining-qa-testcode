@@ -29,6 +29,8 @@ feature directory.
   [Public pool smoke](test-runner/public-pool-smoke/SPEC.md)
 - Exercise deterministic Stratum framing and work →
   [Stratum V1 regression](test-runner/stratum-v1-regression/SPEC.md)
+- Exercise authenticated encrypted Stratum framing and work →
+  [Stratum V2 regression](test-runner/stratum-v2-regression/SPEC.md)
 
 ## Preserve and publish results
 

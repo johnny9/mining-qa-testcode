@@ -25,7 +25,7 @@
 
 ## Verification evidence
 
-- The complete unit suite passed all 91 tests on 2026-09-04, including local
+- The complete unit suite passed all 103 tests on 2026-09-04, including local
   Stratum protocol, bounded reconnect, ESP-Miner job-ID, lifecycle, and spec
   integrity coverage. The wheel and sdist also built successfully.
 - Authorized Gamma 602/BM1370 HIL against ESP-Miner PR 1897 CI firmware
