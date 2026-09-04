@@ -156,8 +156,11 @@ class StratumV1RegressionTest(MinerTestCase):
         server: FakeStratumV1Server,
         settings: Mapping[str, Any],
         username: str,
+        *,
+        connection_id: int | None = None,
     ) -> StratumHandshake:
         handshake = await server.wait_for_handshake(
+            connection_id=connection_id,
             require_configure=True,
             timeout=float(settings.get("handshake_timeout", 45.0)),
         )
@@ -289,8 +292,11 @@ class StratumV1RegressionTest(MinerTestCase):
         settings: Mapping[str, Any],
         username: str,
     ) -> StratumHandshake:
+        connection_id = server.latest_connection_id
+        self.assertIsNotNone(connection_id)
         request = await server.wait_for_request(
             "mining.authorize",
+            connection_id=connection_id,
             timeout=float(settings.get("handshake_timeout", 45.0)),
         )
         self.assertIsNotNone(request.params)
@@ -299,7 +305,12 @@ class StratumV1RegressionTest(MinerTestCase):
         self.assertEqual(request.params[0], username)
         self.assertEqual(request.params[1], "<redacted>")
         self.logger.info("mining.authorize completed")
-        return await self._wait_for_handshake(server, settings, username)
+        return await self._wait_for_handshake(
+            server,
+            settings,
+            username,
+            connection_id=connection_id,
+        )
 
     async def _case_04_mining_notify_and_accepted_share(
         self,
@@ -357,7 +368,7 @@ class StratumV1RegressionTest(MinerTestCase):
         self.assertGreater(changed_difficulty, 0)
         self.assertNotEqual(changed_difficulty, initial_difficulty)
 
-        job = MiningJob.standard("fresh-work-after-difficulty-change")
+        job = MiningJob.standard("fresh-after-diff")
         server.submission_policy = lambda submission: submission.job_id == job.job_id
         await server.send_difficulty(
             initial_difficulty, session=handshake.connection_id
@@ -598,7 +609,7 @@ class StratumV1RegressionTest(MinerTestCase):
                 f"invalid {name} notification changed workReceived",
             )
 
-            recovery = MiningJob.standard(f"valid-after-{name}")
+            recovery = MiningJob.standard(f"valid-notify-{index}")
             submission = await self._mine_one_share(
                 server,
                 recovery,
@@ -662,7 +673,7 @@ class StratumV1RegressionTest(MinerTestCase):
                     f"invalid {name} changed pool difficulty",
                 )
 
-            recovery = MiningJob.standard(f"valid-after-{name}")
+            recovery = MiningJob.standard(f"valid-state-{offset}")
             submission = await self._mine_one_share(
                 server,
                 recovery,

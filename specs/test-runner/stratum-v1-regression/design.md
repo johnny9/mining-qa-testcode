@@ -49,6 +49,9 @@
 
 - One class-scoped server and temporary device configuration serve the ordered
   scenario sequence.
+- Ordered cases bind to the newest fully negotiated connection after a device
+  configuration restart, not a stale pre-restart session.
+- Generated ESP-Miner work uses non-empty job IDs shorter than 32 UTF-8 bytes.
 - Every socket wait, scenario wait, and shutdown is bounded.
 - Scenario order is explicit; after the first prerequisite failure, dependent
   scenarios are skipped rather than reported as independent regressions.
@@ -79,6 +82,8 @@ defined scenario boundaries, not implicitly between unrelated messages.
 
 - Bind/start failure aborts before device mutation where possible.
 - Lost client or protocol mismatch fails the current scenario with transcript.
+- A malformed line that requires transport recovery must produce a new
+  configure/subscribe/authorize handshake within the reconnect bound.
 - Lifecycle cleanup still restores the baseline and reports cleanup errors.
 
 ## Compatibility and migration

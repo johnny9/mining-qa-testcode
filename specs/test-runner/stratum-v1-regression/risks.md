@@ -24,6 +24,8 @@
 
 - Wrong advertised address produces a misleading client timeout.
 - Scenario state leaks into a later case.
+- A malformed-frame disconnect leaves stale writes alive or delays the new
+  connection beyond the recovery bound.
 - Server teardown races with transcript collection.
 - A failed run leaves the miner attached to the fake pool.
 

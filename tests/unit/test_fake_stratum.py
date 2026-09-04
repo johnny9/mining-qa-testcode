@@ -23,6 +23,14 @@ class MiningJobTest(unittest.TestCase):
         self.assertEqual(len(changed.notification()["params"][4]), 1)
         self.assertRegex(job.ntime, r"^[0-9a-f]{8}$")
 
+    def test_job_id_matches_esp_miner_bound(self) -> None:
+        self.assertEqual(MiningJob.standard("j" * 31).job_id, "j" * 31)
+        for invalid in ("", "j" * 32):
+            with self.subTest(invalid=invalid), self.assertRaisesRegex(
+                ValueError, "job_id"
+            ):
+                MiningJob.standard(invalid)
+
     def test_server_rejects_unsafe_setup_values(self) -> None:
         with self.assertRaisesRegex(ValueError, "extranonce2_size"):
             FakeStratumV1Server(extranonce2_size=33)

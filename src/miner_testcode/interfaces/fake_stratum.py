@@ -43,6 +43,14 @@ class MiningJob:
     ntime: str = "00000000"
     clean_jobs: bool = True
 
+    def __post_init__(self) -> None:
+        try:
+            job_id_size = len(self.job_id.encode("utf-8"))
+        except AttributeError as exc:
+            raise ValueError("job_id must be a string") from exc
+        if not 1 <= job_id_size < 32:
+            raise ValueError("job_id must contain 1 through 31 UTF-8 bytes")
+
     @classmethod
     def standard(cls, job_id: str, *, clean_jobs: bool = True) -> MiningJob:
         return cls(

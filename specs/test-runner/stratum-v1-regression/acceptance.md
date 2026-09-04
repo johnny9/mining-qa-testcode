@@ -20,14 +20,25 @@
 
 - [x] **TR-STRATUM-AC-07:** Loopback unit tests cover supported messages,
   injected responses, timeouts, and shutdown.
-- [ ] **TR-STRATUM-AC-08:** A current authorized HIL run proves the target
+- [x] **TR-STRATUM-AC-08:** A current authorized HIL run proves the target
   firmware reacts correctly and the original pool is restored.
 
 ## Verification evidence
 
-- `tests.unit.test_fake_stratum` and `tests.unit.test_stratum` cover local
-  protocol behavior; reconciled 2026-08-10.
-- Full miner-client HIL was not run for this documentation iteration.
+- The complete unit suite passed all 91 tests on 2026-09-04, including local
+  Stratum protocol, bounded reconnect, ESP-Miner job-ID, lifecycle, and spec
+  integrity coverage. The wheel and sdist also built successfully.
+- Authorized Gamma 602/BM1370 HIL against ESP-Miner PR 1897 CI firmware
+  `1c44a87` passed its five active ordered cases in artifact
+  `20260904T151421.340396Z`; the two PR 1849 validation cases were explicitly
+  skipped. Cleanup reported success, and an independent API read confirmed the
+  original pools, unpaused mining, and healthy hashrate.
+- A broader compatibility run enabling PR 1849's opt-in parser cases is
+  retained as artifact `20260904T150022.298245Z`: the five standard cases plus
+  fragmentation, consecutive messages, and the exact 16 KiB boundary passed,
+  but embedded-NUL reconnect timed out and the dependent invalid-state case
+  skipped. This does not invalidate the exact PR 1897 selection, but records a
+  current firmware compatibility defect.
 
 ## Acceptance rule
 
