@@ -36,6 +36,9 @@
   fresh-share progression after each transition.
 - [ ] **TR-FALLBACK-AC-14:** A connected primary that stops replying triggers
   failover within the configured deadline and recovers when replies resume.
+- [ ] **TR-FALLBACK-AC-15:** A 15-second primary silence resumes fresh mining
+  on the same connection; long-silence validation uses a separate bounded
+  deadline that accommodates the firmware's inactivity timeout and retries.
 
 - [x] **TR-FALLBACK-AC-07:** Loopback and fake-device tests cover timeout,
   stale evidence, partial setup, cleanup failure, secrets, and selection.
@@ -48,6 +51,11 @@
 
 ## Verification evidence
 
+- 2026-09-11: The silent-pool fix validation adds separate long-silence budget
+  forwarding, invalid catalog bounds, and short-silence fault-release checks.
+  All 138 unit tests and wheel/sdist builds passed. The new hardware case and
+  longer failover budget await qualification below; earlier hardware evidence
+  describes the previous module and firmware.
 - 2026-09-11: `tests.unit.test_pool_fallback` passed 23 tests covering pool
   ownership, partial writes, cleanup failure, policy-independent mining checks,
   privacy, loopback jobs, browser attachment, resource limits, and recovery.

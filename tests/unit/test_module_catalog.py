@@ -55,16 +55,17 @@ class ModuleCatalogTest(unittest.TestCase):
                 })}, catalog,
             )
 
-        selected = select({"phase_timeout": 300, "share_difficulty": 256})
+        selected = select({"phase_timeout": 300, "silent_phase_timeout": 900, "share_difficulty": 256})
         self.assertIsNotNone(selected)
         assert selected is not None
-        self.assertEqual(dict(selected[1]), {"phase_timeout": 300, "share_difficulty": 256})
+        self.assertEqual(dict(selected[1]), {"phase_timeout": 300, "silent_phase_timeout": 900, "share_difficulty": 256})
         for values in (
             {"phase_timeout": 4}, {"phase_timeout": 301},
             {"share_difficulty": 0}, {"share_difficulty": 65537},
             {"enabled": True}, {"primary_port": 4333},
             {"advertised_host": "test-host"},
             {"stable_seconds": 61}, {"transition_cycles": 1}, {"outage_seconds": 14},
+            {"silent_phase_timeout": 4}, {"silent_phase_timeout": 1201},
         ):
             with self.subTest(values=values), self.assertRaises(ConfigError):
                 select(values)

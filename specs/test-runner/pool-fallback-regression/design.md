@@ -30,10 +30,11 @@ firewall. The test does not change firewall rules.
 
 The versioned module catalog registers `pool_fallback_regression` with the
 existing coordinator capabilities `http` and `stratum-v1`. Its portable options
-are integer `phase_timeout` (5–300), `share_difficulty` (1–65536),
+are integer `phase_timeout` (5–300, default 180), `silent_phase_timeout`
+(5–1200, default 900), `share_difficulty` (1–65536),
 `stable_seconds` (0–60, default 5), `transition_cycles` (2–5, default 3), and
 `outage_seconds` (15–180, default 45). The stability window must be shorter
-than the phase deadline. Zero disables the additional stability requirement.
+than both phase deadlines. Zero disables the additional stability requirement.
 Enablement, addresses, ports, browser attachment, and target identity remain
 local profile settings; catalog selection does not authorize hardware writes.
 
@@ -105,6 +106,10 @@ duration and require observed loss of work before restoring only primary or
 fallback. Repeated cycles require stability after every transition. The silent
 case keeps established TCP connections open while withholding replies and
 jobs; it restores replies even on a failed assertion before normal cleanup.
+A separate short-silence case withholds replies for 15 seconds, verifies the
+same primary connection and selection throughout, then requires fresh mining
+on that connection. Only the long-silence failover phase uses the separate
+silent deadline; recovery retains the ordinary phase deadline.
 
 ## Failure and recovery
 
@@ -132,7 +137,8 @@ The pool-form case skips before hardware setup without browser configuration.
 
 ## Resource and operational constraints
 
-Phase deadlines (5–300 seconds), polling cadence (0.25–5 seconds), 16 KiB client
+Ordinary phase deadlines (5–300 seconds), the silent failover deadline
+(5–1200 seconds), polling cadence (0.25–5 seconds), 16 KiB client
 lines, at most 64 accepted connections, 20,000 client requests, and
 4,096 jobs per endpoint bound execution and evidence. Bind to a trusted
 reachable lab interface.

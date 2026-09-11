@@ -41,8 +41,8 @@ needed recovery restart visible as an error.
 A TCP connection can remain open while the pool stops sending jobs and share
 acknowledgements. Gamma firmware `ede6c13` did not fail over from that condition
 within a 180-second phase deadline. The SV1 receive loop is unchanged between
-PR #1962 and its parent; source inspection suggests its repeated empty reads
-as the cause. This is an observed firmware limitation, not a reason to skip or
+PR #1962 and its parent; a source-derived reproduction confirms repeated empty
+reads never expire. This is an observed firmware limitation, not a reason to skip or
 weaken the regression. Recovery after the silent-primary failover assertion
 was not reached; normal cleanup releases the injected silence first.
 
@@ -60,6 +60,10 @@ successful UI validation. Silent fault injection is released before restoration.
 
 Tests interrupt normal mining temporarily. Deadlines must cover real firmware
 retry/heartbeat periods without requiring an exact timing policy.
+The silent-primary budget defaults to 900 seconds because each existing retry
+may consume a three-minute receive timeout. Ordinary phases retain their
+shorter deadline. The separate 15-second silence case catches premature
+disconnects caused by treating every transport poll timeout as a pool failure.
 
 ## Rollout and rollback
 

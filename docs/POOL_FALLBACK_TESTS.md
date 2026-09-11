@@ -7,6 +7,12 @@ after both pools are down, repeat failover cycles, and exercise a primary that
 keeps its TCP connection open but stops replying. The PR 1957/1962 option adds
 the original settings-save and role-swap scenario.
 
+A short-silence case withholds replies for 15 seconds, then requires fresh
+mining on the same primary connection. The long-silence case uses
+`silent_phase_timeout` (5–1200 seconds, default 900) to accommodate the firmware's
+three-minute receive timeout and existing retries. Other phases retain
+`phase_timeout` (5–300 seconds, default 180).
+
 Each phase requires the expected saved preference and active pool, fresh work,
 a new submission to the expected local server, and new accepted shares reported
 by the miner. A settings save may reconnect or trigger a probe; either is valid
@@ -14,7 +20,7 @@ if mining resumes on the correct pool within the deadline.
 
 By default each phase also requires five seconds of stable selection, a later
 job, and additional accepted shares. Configure `stable_seconds` (0–60, below
-`phase_timeout`), `transition_cycles` (2–5, default 3), and `outage_seconds`
+both phase timeouts), `transition_cycles` (2–5, default 3), and `outage_seconds`
 (15–180, default 45) to adjust the bounded scenarios. A zero stability window
 retains the original single-transition check.
 
@@ -25,7 +31,7 @@ default to automatically chosen ports; set two distinct fixed ports when host
 firewall rules require them. Local listener startup alone does not prove the
 miner can reach those ports.
 
-The module catalog exposes phase timeout, share difficulty, stability window,
+The module catalog exposes both phase timeouts, share difficulty, stability window,
 cycle count, and outage duration. Enablement and device and test-host settings
 remain in your local profile.
 

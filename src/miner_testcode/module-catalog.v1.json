@@ -288,6 +288,16 @@
           "maximum": 300
         },
         {
+          "id": "silent_phase_timeout",
+          "label": "Silent pool phase timeout (seconds)",
+          "description": "Allow the receive inactivity deadline and existing connection retries before failover.",
+          "type": "integer",
+          "required": false,
+          "default": 900,
+          "minimum": 5,
+          "maximum": 1200
+        },
+        {
           "id": "share_difficulty",
           "label": "Share difficulty",
           "description": "Difficulty supplied by the temporary test pools.",

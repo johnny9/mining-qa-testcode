@@ -32,12 +32,13 @@ class PoolFallbackRegressionTest(MinerTestCase):
             raise ConfigError("advertised_host must be reachable from the miner")
         self.bind_host = str(self.settings.get("bind_host", "127.0.0.1"))
         self.phase_timeout = bounded_number(self.settings, "phase_timeout", 180, 5, 300)
+        self.silent_phase_timeout = bounded_number(self.settings, "silent_phase_timeout", 900, 5, 1200)
         self.poll_interval = bounded_number(self.settings, "poll_interval", 1, 0.25, 5)
         self.stable_seconds = bounded_number(self.settings, "stable_seconds", 5, 0, 60)
         self.outage_seconds = bounded_number(self.settings, "outage_seconds", 45, 15, 180)
         cycles = bounded_number(self.settings, "transition_cycles", 3, 2, 5)
-        if not cycles.is_integer() or self.stable_seconds >= self.phase_timeout:
-            raise ConfigError("transition_cycles must be an integer and stable_seconds below phase_timeout")
+        if not cycles.is_integer() or self.stable_seconds >= min(self.phase_timeout, self.silent_phase_timeout):
+            raise ConfigError("transition_cycles must be an integer and stable_seconds below both phase deadlines")
         self.transition_cycles = int(cycles)
         if self._testMethodName == 'test_pool_settings_form' and not self.settings.get('dashboard_cdp_url'):
             self.skipTest('pool-settings form validation requires dashboard_cdp_url')
@@ -110,8 +111,9 @@ class PoolFallbackRegressionTest(MinerTestCase):
             raise DeviceError("Original settings and mining restored, but firmware required a recovery restart")
 
     async def _phase(self, name: str, pool: WorkingPool, *, preference: int, fallback: int,
-                     check_dashboard: bool = True) -> None:
+                     check_dashboard: bool = True, timeout: float | None = None) -> None:
         self.chart("Pool phase: %s", name)
+        deadline = self.phase_timeout if timeout is None else timeout
 
         def observe(sample: dict[str, Any]) -> None:
             self.primary_pool.check_limits()
@@ -121,7 +123,7 @@ class PoolFallbackRegressionTest(MinerTestCase):
         try:
             await wait_for_mining(self.device.current_info, pool, self.pools,
                                   preference=preference, fallback=fallback,
-                                  timeout=self.phase_timeout, poll_interval=self.poll_interval,
+                                  timeout=deadline, poll_interval=self.poll_interval,
                                   observe=observe, dashboard=self.dashboard if check_dashboard else None,
                                   stable_seconds=getattr(self, 'stable_seconds', 0))
         except TimeoutError:
@@ -130,7 +132,7 @@ class PoolFallbackRegressionTest(MinerTestCase):
                     "local-pool setup could not establish mining; check miner-to-host "
                     "reachability and the Stratum transcript before interpreting a regression"
                 ) from None
-            self.fail(f"{name}: no matching active pool and fresh accepted share within {self.phase_timeout:g}s")
+            self.fail(f"{name}: no matching active pool and fresh accepted share within {deadline:g}s")
         self.chart("Pool phase passed: %s", name, status="good")
 
     async def _manual_select(self, fallback: int) -> None:
@@ -231,7 +233,8 @@ class PoolFallbackRegressionTest(MinerTestCase):
         self.assertTrue(any(s.connected for s in self.primary_pool.sessions))
         self.primary_pool.silent = True  # Existing TCP connections remain open.
         try:
-            await self._phase('silent-primary-fallback', self.fallback_pool, preference=0, fallback=1)
+            await self._phase('silent-primary-fallback', self.fallback_pool, preference=0, fallback=1,
+                              timeout=self.silent_phase_timeout)
             self.assertGreater(self.primary_pool.silent_requests, 0,
                                'silent endpoint did not receive miner requests')
         finally:
@@ -240,6 +243,32 @@ class PoolFallbackRegressionTest(MinerTestCase):
             self.primary_pool.silent = False
             await self.primary_pool.publish_work()
         await self._phase('silent-primary-recovery', self.primary_pool, preference=0, fallback=0)
+
+    async def test_primary_resumes_after_short_silence(self) -> None:
+        connections = {s.connection_id for s in self.primary_pool.sessions if s.connected}
+        self.assertTrue(connections)
+        started = time.monotonic()
+        previous_uptime = None
+        self.primary_pool.silent = True
+        try:
+            while time.monotonic() - started < 15:
+                info = await self.device.current_info()
+                self.assertEqual(info['isUsingFallbackStratum'], 0)
+                self.assertEqual(info['useFallbackStratum'], 0)
+                if any(info.get(k) for k in ('hardware_fault', 'power_fault', 'overheat_mode', 'miningPaused')):
+                    raise DeviceError('device fault or pause during short silence')
+                uptime = info['uptimeSeconds']
+                if previous_uptime is not None and uptime < previous_uptime:
+                    self.fail('device restarted during short silence')
+                previous_uptime = uptime
+                self.assertEqual({s.connection_id for s in self.primary_pool.sessions if s.connected}, connections)
+                self.assertFalse(self.fallback_pool.sessions, 'short silence triggered a fallback connection')
+                await asyncio.sleep(self.poll_interval)
+        finally:
+            self.primary_pool.silent = False
+            await self.primary_pool.publish_work()
+        await self._phase('primary-after-short-silence', self.primary_pool, preference=0, fallback=0)
+        self.assertEqual({s.connection_id for s in self.primary_pool.sessions if s.connected}, connections)
 
     async def test_pool_settings_form(self) -> None:
         assert self.dashboard is not None

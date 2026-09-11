@@ -36,6 +36,7 @@ bind_host = "${MINER_TEST_ADVERTISED_HOST}"
 primary_port = 0
 fallback_port = 0
 phase_timeout = 180
+silent_phase_timeout = 900
 stable_seconds = 5
 transition_cycles = 3
 outage_seconds = 45

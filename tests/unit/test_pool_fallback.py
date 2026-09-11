@@ -221,9 +221,34 @@ class MiningEvidenceTest(unittest.IsolatedAsyncioTestCase):
         case.primary_pool = SimpleNamespace(silent=False, publish_work=AsyncMock(),
                                             sessions=[SimpleNamespace(connected=True)])
         case.fallback_pool = None
+        case.silent_phase_timeout = 900
         case._phase = AsyncMock(side_effect=AssertionError('no failover'))
         with self.assertRaisesRegex(AssertionError, 'no failover'):
             await case.test_silent_primary_fails_over_and_recovers()
+        self.assertFalse(case.primary_pool.silent)
+        case.primary_pool.publish_work.assert_awaited_once()
+        self.assertEqual(case._phase.await_args.kwargs['timeout'], 900)
+
+    async def test_silent_phase_uses_its_separate_retry_budget(self):
+        from tests.e2e.test_pool_fallback_regression import PoolFallbackRegressionTest
+        case = PoolFallbackRegressionTest('test_silent_primary_fails_over_and_recovers')
+        case.chart = lambda *a, **kw: None
+        case.device = SimpleNamespace(current_info=AsyncMock())
+        case.pools = None
+        case.phase_timeout, case.poll_interval, case.dashboard = 180, 1, None
+        with patch('tests.e2e.test_pool_fallback_regression.wait_for_mining', new_callable=AsyncMock) as wait:
+            await case._phase('silent-primary-fallback', None, preference=0, fallback=1, timeout=900)
+        self.assertEqual(wait.await_args.kwargs['timeout'], 900)
+
+    async def test_short_silence_failure_releases_the_fault(self):
+        from tests.e2e.test_pool_fallback_regression import PoolFallbackRegressionTest
+        case = PoolFallbackRegressionTest('test_primary_resumes_after_short_silence')
+        case.primary_pool = SimpleNamespace(silent=False, publish_work=AsyncMock(),
+            sessions=[SimpleNamespace(connected=True, connection_id=1)])
+        case.fallback_pool = SimpleNamespace(sessions=[])
+        case.device = SimpleNamespace(current_info=AsyncMock(return_value={'isUsingFallbackStratum': 1}))
+        with self.assertRaises(AssertionError):
+            await case.test_primary_resumes_after_short_silence()
         self.assertFalse(case.primary_pool.silent)
         case.primary_pool.publish_work.assert_awaited_once()
 

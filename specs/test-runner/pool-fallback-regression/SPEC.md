@@ -13,6 +13,9 @@ temporary local pools, with optional rendered dashboard and pool-form checks.
 
 ## Changelog
 
+- 2026-09-11: Added a 15-second silence recovery check that preserves the
+  primary connection and a separate bounded deadline for long-silence failover
+  through the firmware's existing timeout and retry policy (ESP-Miner #1964).
 - 2026-09-11: Extended coverage to active edits, manual fallback preference,
   correcting an unavailable primary, recovery of either pool after a full
   outage, repeated transitions, and connected-but-silent endpoints. Added a
