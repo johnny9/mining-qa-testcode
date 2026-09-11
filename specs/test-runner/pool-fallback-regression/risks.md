@@ -46,6 +46,13 @@ reads never expire. This is an observed firmware limitation, not a reason to ski
 weaken the regression. Recovery after the silent-primary failover assertion
 was not reached; normal cleanup releases the injected silence first.
 
+Firmware `8cdade8b` subsequently passed the full nine-case Gamma regression.
+The receive deadline returned to the existing retry state machine: sustained
+silence reached stable fallback mining after 732.392 seconds, then recovered
+primary after replies resumed. Short silence preserved the same connection.
+Older firmware remains subject to the observed unbounded wait; other firmware
+retry policies may need a different bounded silent-phase setting.
+
 ## Security, privacy, and safety
 
 Original credentials never leave original slots. Read-only/invalid baselines

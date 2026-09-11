@@ -34,9 +34,9 @@
   either endpoint resumes mining without a manual restart.
 - [x] **TR-FALLBACK-AC-13:** Repeated failover/recovery requires stable
   fresh-share progression after each transition.
-- [ ] **TR-FALLBACK-AC-14:** A connected primary that stops replying triggers
+- [x] **TR-FALLBACK-AC-14:** A connected primary that stops replying triggers
   failover within the configured deadline and recovers when replies resume.
-- [ ] **TR-FALLBACK-AC-15:** A 15-second primary silence resumes fresh mining
+- [x] **TR-FALLBACK-AC-15:** A 15-second primary silence resumes fresh mining
   on the same connection; long-silence validation uses a separate bounded
   deadline that accommodates the firmware's inactivity timeout and retries.
 
@@ -54,8 +54,8 @@
 - 2026-09-11: The silent-pool fix validation adds separate long-silence budget
   forwarding, invalid catalog bounds, and short-silence fault-release checks.
   All 138 unit tests and wheel/sdist builds passed. The new hardware case and
-  longer failover budget await qualification below; earlier hardware evidence
-  describes the previous module and firmware.
+  longer failover budget are qualified by the final fix run below; earlier
+  hardware evidence describes the previous module and firmware.
 - 2026-09-11: `tests.unit.test_pool_fallback` passed 23 tests covering pool
   ownership, partial writes, cleanup failure, policy-independent mining checks,
   privacy, loopback jobs, browser attachment, resource limits, and recovery.
@@ -110,7 +110,7 @@
   and re-edit persistence. Active edits, both independent 45-second full
   outages, and all three failover/recovery cycles passed. This completes
   AC-10 through AC-13.
-- AC-14 remains unqualified: the silent connected primary retained selection
+- In that historical run, AC-14 remained unqualified: the silent connected primary retained selection
   for 180 s while accepted shares remained at six. Fallback received no fresh
   submissions; recovery after that assertion was not reached. The regression
   remains a failure, with no skip or expected-failure conversion. Source
@@ -123,6 +123,22 @@
   target/test-host addresses, target MAC, and original pool worker names.
 - Wheel/sdist builds include the browser helper and expanded module catalog.
   Specification integrity, maintenance review, and whitespace checks passed.
+- Final fix run `20260911T153046.664704Z` used testcode
+  `a5bec343f3fa40821da12a98e7d497461c526ebc` and firmware
+  `8cdade8b7b3f48fdc3f828e87b080b69806a3e56` (ESP-Miner #1964 fix), based on
+  merged #1962. All nine cases and 37 mining phases passed in 1795.388 s,
+  with zero failures, errors, or skips. The 15-second silence retained the
+  same primary connection and resumed accepted shares. Sustained silence
+  produced four bounded receive timeouts, reached stable fallback mining in
+  732.392 s, and recovered primary mining in 53.835 s after replies resumed.
+  These timings include the unchanged three-minute receive and retry policy.
+  This completes AC-14 and AC-15.
+- All nine fix-run cleanups restored original settings and fresh shares
+  without a restart. Independent verification confirmed the two original
+  rows, fresh accepted shares, 1078.03 GH/s and 60.375 degrees C. The browser
+  and test listeners were closed. All 118 finalized run artifact files passed
+  the private-coordinate and original-worker audit; private raw logs remain
+  in their separate, unpublished directory.
 
 ## Acceptance rule
 

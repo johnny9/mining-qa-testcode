@@ -13,6 +13,10 @@ temporary local pools, with optional rendered dashboard and pool-form checks.
 
 ## Changelog
 
+- 2026-09-11: Qualified the nine-case module on Gamma-02 with the ESP-Miner
+  #1964 receive-timeout fix. All 37 mining phases passed, including short
+  silence on the same connection and sustained-silence failover/recovery.
+  Every cleanup and the independent restoration check passed without restart.
 - 2026-09-11: Added a 15-second silence recovery check that preserves the
   primary connection and a separate bounded deadline for long-silence failover
   through the firmware's existing timeout and retry policy (ESP-Miner #1964).
