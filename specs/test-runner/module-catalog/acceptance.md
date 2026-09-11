@@ -28,6 +28,10 @@
 
 ## Verification evidence
 
+- 2026-09-11: Registered the pool fallback module and verified its timeout and
+  difficulty bounds. Portable selection rejects enablement and endpoint fields.
+  All 127 unit tests and wheel/sdist builds passed after integration onto the
+  current upstream code. The package retains the versioned catalog asset.
 - The complete Testcode unit suite passed all 99 tests on 2026-09-04. Focused
   catalog tests cover loading, duplicate/private option rejection, typed
   bounds, profile overlay, and selected-module pattern validation before

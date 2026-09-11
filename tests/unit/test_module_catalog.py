@@ -22,6 +22,7 @@ class ModuleCatalogTest(unittest.TestCase):
                 "public_pool_smoke",
                 "stratum_v1_regression",
                 "stratum_v2_regression",
+                "pool_fallback_regression",
             ],
         )
         public_pool = catalog.module("public_pool_smoke")
@@ -38,6 +39,34 @@ class ModuleCatalogTest(unittest.TestCase):
         )
         self.assertEqual(channel_type.default, "extended")
         self.assertEqual(channel_type.choices, ("standard", "extended"))
+
+    def test_fallback_selection_keeps_enablement_and_coordinates_private(self) -> None:
+        catalog = load_module_catalog()
+        module = catalog.module("pool_fallback_regression")
+        self.assertEqual(module.test_pattern, "test_pool_fallback_regression.py")
+        self.assertEqual(module.required_capabilities, ("http", "stratum-v1"))
+
+        def select(values):
+            return selected_module_options(
+                {"MINER_TEST_MODULE_OPTIONS": json.dumps({
+                    "schema_version": 1,
+                    "module_id": module.id,
+                    "values": values,
+                })}, catalog,
+            )
+
+        selected = select({"phase_timeout": 300, "share_difficulty": 256})
+        self.assertIsNotNone(selected)
+        assert selected is not None
+        self.assertEqual(dict(selected[1]), {"phase_timeout": 300, "share_difficulty": 256})
+        for values in (
+            {"phase_timeout": 4}, {"phase_timeout": 301},
+            {"share_difficulty": 0}, {"share_difficulty": 65537},
+            {"enabled": True}, {"primary_port": 4333},
+            {"advertised_host": "test-host"},
+        ):
+            with self.subTest(values=values), self.assertRaises(ConfigError):
+                select(values)
 
     def test_selection_accepts_only_declared_typed_bounded_values(self) -> None:
         catalog = load_module_catalog()

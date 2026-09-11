@@ -266,6 +266,38 @@
           "maximum": 3600
         }
       ]
+    },
+    {
+      "id": "pool_fallback_regression",
+      "name": "Pool fallback regression",
+      "description": "Validate pool switching, automatic fallback and recovery, settings changes, and cleanup.",
+      "test_pattern": "test_pool_fallback_regression.py",
+      "required_capabilities": [
+        "http",
+        "stratum-v1"
+      ],
+      "options": [
+        {
+          "id": "phase_timeout",
+          "label": "Phase timeout (seconds)",
+          "description": "Maximum wait for correct pool selection and fresh accepted shares.",
+          "type": "integer",
+          "required": false,
+          "default": 180,
+          "minimum": 5,
+          "maximum": 300
+        },
+        {
+          "id": "share_difficulty",
+          "label": "Share difficulty",
+          "description": "Difficulty supplied by the temporary test pools.",
+          "type": "integer",
+          "required": false,
+          "default": 256,
+          "minimum": 1,
+          "maximum": 65536
+        }
+      ]
     }
   ]
 }

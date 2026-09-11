@@ -31,6 +31,8 @@ feature directory.
   [Stratum V1 regression](test-runner/stratum-v1-regression/SPEC.md)
 - Exercise authenticated encrypted Stratum framing and work →
   [Stratum V2 regression](test-runner/stratum-v2-regression/SPEC.md)
+- Validate pool switching and fallback recovery →
+  [Pool fallback regression](test-runner/pool-fallback-regression/SPEC.md)
 
 ## Preserve and publish results
 

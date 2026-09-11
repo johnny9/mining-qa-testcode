@@ -87,6 +87,8 @@ result pointer and keeps a verified local artifact copy.
   local output.
 - [Stratum tests](docs/STRATUM_TESTS.md): run the public-pool smoke test and
   local Stratum V1/V2 regressions.
+- [Pool fallback tests](docs/POOL_FALLBACK_TESTS.md): validate switching,
+  failover, recovery, and pool settings with optional dashboard checks.
 - [Publishing guide](docs/PUBLISHING.md): configure local, GitHub, and Mining QA
   Status results.
 - [Orchestration v1](contracts/orchestration-v1.md) and

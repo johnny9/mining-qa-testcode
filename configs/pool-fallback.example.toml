@@ -1,0 +1,45 @@
+[runner]
+artifacts_dir = "../artifacts"
+tests_dir = "../tests/e2e"
+pattern = "test_pool_fallback_regression.py"
+cleanup_timeout = 120
+validation_prs = []
+
+[publishers.local]
+enabled = true
+required = true
+
+[[devices]]
+name = "gamma-test"
+type = "bitaxe_602"
+
+[devices.options]
+read_only = false
+publication_name = "Bitaxe Gamma 602"
+
+[devices.interfaces.api]
+base_url = "${MINER_TEST_DEVICE_URL}"
+timeout = 5
+retries = 2
+poll_interval = 1
+
+[devices.interfaces.websocket]
+enabled = true
+required = false
+
+[tests.pool_fallback_regression]
+# Explicit opt-in; three unused pool slots and unpaused mining are required.
+enabled = false
+advertised_host = "${MINER_TEST_ADVERTISED_HOST}"
+bind_host = "${MINER_TEST_ADVERTISED_HOST}"
+# Zero chooses unused ports; specify two allowed ports when a firewall requires it.
+primary_port = 0
+fallback_port = 0
+phase_timeout = 180
+poll_interval = 1
+share_difficulty = 256
+# Pin these in the ignored local profile for a particular validation target.
+# expected_hostname = "gamma-test"
+# expected_version = "installed-firmware-version"
+# Optional: open the device dashboard in a browser with a loopback CDP port.
+# dashboard_cdp_url = "http://127.0.0.1:9224"

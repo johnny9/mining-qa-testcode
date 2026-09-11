@@ -5,7 +5,7 @@ build gates without importing runner code or retyping patterns and options.
 
 - **Lifecycle:** supported
 - **Owner:** test-runner maintainers
-- **Last reconciled:** 2026-09-04
+- **Last reconciled:** 2026-09-11
 - **Spec ID:** TR-CATALOG
 
 [Intent](intent.md) · [Acceptance](acceptance.md) · [Design](design.md) ·
@@ -13,6 +13,8 @@ build gates without importing runner code or retyping patterns and options.
 
 ## Changelog
 
+- 2026-09-11: Added pool fallback regression with bounded phase timeout and
+  share difficulty; enablement and endpoint settings remain in private profiles.
 - 2026-09-04: Added the Stratum V2 regression module with a bounded channel
   enum, difficulty values, and waits while keeping endpoints and identities in
   private profiles.
