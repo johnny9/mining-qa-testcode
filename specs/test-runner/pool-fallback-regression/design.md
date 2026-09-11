@@ -6,6 +6,9 @@ The E2E module (`tests/e2e/test_pool_fallback_regression.py`) owns scenarios;
 `src/miner_testcode/pool_fallback.py` owns native indexed-pool
 writes and removal; two fake SV1 endpoints provide work and submission evidence.
 The normal runner retains identity, baseline, logs, telemetry, and publication.
+`src/miner_testcode/pool_form.py` drives the real pool settings form and guards
+browser writes so only disposable rows and submitted role indices reach the
+device.
 
 ## Interfaces and contracts
 
@@ -27,7 +30,10 @@ firewall. The test does not change firewall rules.
 
 The versioned module catalog registers `pool_fallback_regression` with the
 existing coordinator capabilities `http` and `stratum-v1`. Its portable options
-are integer `phase_timeout` (5–300) and `share_difficulty` (1–65536).
+are integer `phase_timeout` (5–300), `share_difficulty` (1–65536),
+`stable_seconds` (0–60, default 5), `transition_cycles` (2–5, default 3), and
+`outage_seconds` (15–180, default 45). The stability window must be shorter
+than the phase deadline. Zero disables the additional stability requirement.
 Enablement, addresses, ports, browser attachment, and target identity remain
 local profile settings; catalog selection does not authorize hardware writes.
 
@@ -53,6 +59,9 @@ existing `websockets` dependency; the module never starts a browser itself.
 Per-test phase observations and fake-pool transcripts are sanitized artifacts.
 Baseline data stays in memory and is never read back from sanitized evidence.
 Only three initially unused device pool slots and selection flags are mutated.
+`pool-outage.jsonl` records loss of work and `pool-form.jsonl` records verified
+browser saves and persistence. Browser input and raw intercepted bodies are
+never artifacts.
 
 ## Contract constraints
 
@@ -62,6 +71,18 @@ Every phase needs new work and accepted-share evidence, not merely an open
 connection or a successful probe. Automatic recovery performs no selection
 write. Settings-save validation permits a reconnect. Cleanup selects original
 rows before deleting owned temporary rows and verifies the original table.
+The stability window resets when selection or mining evidence stops matching;
+it requires another job and additional accepted shares after the first match.
+
+The browser case edits a worker and causes a secondary-role collision, saves,
+then edits and causes the opposite primary-role collision in the same form
+instance. It reloads, edits an idle row, saves again, and reloads to verify
+persistence. The request guard preserves the form's submitted workers and
+roles; it never repairs a regression by substituting the expected outcome.
+It removes original rows, passwords, and dormant protocol defaults. Unexpected
+role indices, changed original fields, changed temporary endpoints, malformed
+bodies, and unrelated device writes are aborted before transmission. The
+actual Save response and subsequent live API reads determine success.
 
 ### Forbidden behavior
 
@@ -78,6 +99,12 @@ pool allocation. Per-phase request and job cursors exclude stale evidence.
 Validate config and baseline; start endpoints; register cleanup; create slots;
 verify mining; drive endpoint outages and settings; verify each phase; restore
 selection and delete slots before the generic lifecycle cleanup.
+
+Independent full-outage cases keep both listeners down for the configured
+duration and require observed loss of work before restoring only primary or
+fallback. Repeated cycles require stability after every transition. The silent
+case keeps established TCP connections open while withholding replies and
+jobs; it restores replies even on a failed assertion before normal cleanup.
 
 ## Failure and recovery
 
@@ -101,6 +128,7 @@ configured cleanup timeout.
 
 Existing Stratum regression work is unchanged. The new module defaults off.
 API-only runs remain supported when no dashboard browser is supplied.
+The pool-form case skips before hardware setup without browser configuration.
 
 ## Resource and operational constraints
 
@@ -108,6 +136,9 @@ Phase deadlines (5–300 seconds), polling cadence (0.25–5 seconds), 16 KiB cl
 lines, at most 64 accepted connections, 20,000 client requests, and
 4,096 jobs per endpoint bound execution and evidence. Bind to a trusted
 reachable lab interface.
+The browser guard allows at most 1,024 API requests and eight saves, 32 KiB
+write bodies, eight pending commands, and 32 guard acknowledgements. CDP
+messages retain the 64 KiB limit; commands and form waits are bounded.
 
 ## Relationships to other feature slices
 

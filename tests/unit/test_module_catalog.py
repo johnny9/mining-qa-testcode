@@ -64,6 +64,7 @@ class ModuleCatalogTest(unittest.TestCase):
             {"share_difficulty": 0}, {"share_difficulty": 65537},
             {"enabled": True}, {"primary_port": 4333},
             {"advertised_host": "test-host"},
+            {"stable_seconds": 61}, {"transition_cycles": 1}, {"outage_seconds": 14},
         ):
             with self.subTest(values=values), self.assertRaises(ConfigError):
                 select(values)

@@ -215,8 +215,21 @@ class MiningEvidenceTest(unittest.IsolatedAsyncioTestCase):
             with self.assertRaisesRegex(DeviceError, "local-pool setup"):
                 await case._phase("initial-primary", None, preference=0, fallback=0)
 
+    async def test_silent_fault_is_released_before_failed_phase_cleanup(self):
+        from tests.e2e.test_pool_fallback_regression import PoolFallbackRegressionTest
+        case = PoolFallbackRegressionTest('test_silent_primary_fails_over_and_recovers')
+        case.primary_pool = SimpleNamespace(silent=False, publish_work=AsyncMock(),
+                                            sessions=[SimpleNamespace(connected=True)])
+        case.fallback_pool = None
+        case._phase = AsyncMock(side_effect=AssertionError('no failover'))
+        with self.assertRaisesRegex(AssertionError, 'no failover'):
+            await case.test_silent_primary_fails_over_and_recovers()
+        self.assertFalse(case.primary_pool.silent)
+        case.primary_pool.publish_work.assert_awaited_once()
+
     async def exercise(self, *, fresh=True, worker=True, flags=True, progress=True,
-                       old_job=False, disconnected=False, reconnect=False, label="Fallback"):
+                       old_job=False, disconnected=False, reconnect=False, label="Fallback",
+                       stable_seconds=0, ongoing=False, flap=False):
         api = FakeApi()
         pools = TemporaryPools(api, api.read, api.info, read_only=False)
         await pools.install("test-host", 3333, 3334, 256)
@@ -237,10 +250,15 @@ class MiningEvidenceTest(unittest.IsolatedAsyncioTestCase):
             result = dict(info)
             if progress:
                 result["sharesAccepted"] += calls
-            if not flags or (reconnect and calls == 1):
+            if not flags or (reconnect and calls == 1) or (flap and calls == 4):
                 result["isUsingFallbackStratum"] = 0
-            if fresh and calls == 2:
-                pool.submissions.append(SimpleNamespace(sequence=11, job_id="old" if old_job else "new",
+            if fresh and (calls == 2 or ongoing and calls > 2):
+                job = 'new'
+                if ongoing:
+                    pool.job_counter += 1
+                    job = f'new-{calls}'
+                    pool.jobs[job] = pool.job_counter
+                pool.submissions.append(SimpleNamespace(sequence=10 + calls, job_id="old" if old_job else job,
                     username=pools.entries[pools.secondary]["stratumUser"] if worker else "wrong-worker",
                     connection_id=1))
             return result
@@ -248,9 +266,14 @@ class MiningEvidenceTest(unittest.IsolatedAsyncioTestCase):
         async def dashboard_label():
             return label
         observations = []
-        result = await wait_for_mining(read, pool, pools, preference=0, fallback=1,
-                                       timeout=0.03, poll_interval=0.001, observe=observations.append,
-                                       dashboard=SimpleNamespace(label=dashboard_label))
+        # Advance phase time with observations, so a slow CI host cannot let
+        # the stability assertion pass before the deliberately injected flap.
+        with patch('miner_testcode.pool_fallback.time',
+                   SimpleNamespace(monotonic=lambda: calls * .001)):
+            result = await wait_for_mining(read, pool, pools, preference=0, fallback=1,
+                                           timeout=0.1, poll_interval=0.001, observe=observations.append,
+                                           dashboard=SimpleNamespace(label=dashboard_label),
+                                           stable_seconds=stable_seconds)
         self.assertGreater(result["sharesAccepted"], 10)
         self.assertTrue(observations[-1]["passed"])
         self.assertNotIn("stratumUser", json.dumps(observations))
@@ -262,6 +285,18 @@ class MiningEvidenceTest(unittest.IsolatedAsyncioTestCase):
     async def test_transient_reconnect_is_allowed(self):
         await self.exercise(reconnect=True)
 
+    async def test_stability_requires_later_jobs_and_shares(self):
+        observations = await self.exercise(stable_seconds=.005, ongoing=True)
+        self.assertGreaterEqual(observations[-1]['steady_seconds'], .005)
+        with self.assertRaises(TimeoutError):
+            await self.exercise(stable_seconds=.005)
+
+    async def test_wrong_pool_during_stability_restarts_the_window(self):
+        observations = await self.exercise(stable_seconds=.005, ongoing=True, flap=True, label='Fallback')
+        wrong = next(i for i, row in enumerate(observations) if row['active_fallback'] == 0)
+        self.assertFalse(observations[wrong]['passed'])
+        self.assertEqual(observations[wrong + 1]['steady_seconds'], 0)
+
     async def test_stale_probe_wrong_worker_counter_or_label_cannot_pass(self):
         for kwargs in ({"fresh": False}, {"worker": False}, {"flags": False},
                        {"progress": False}, {"old_job": True}, {"disconnected": True},
@@ -271,6 +306,32 @@ class MiningEvidenceTest(unittest.IsolatedAsyncioTestCase):
 
 
 class WorkingPoolTest(unittest.IsolatedAsyncioTestCase):
+    async def test_silent_pool_keeps_connection_open_and_withholds_protocol(self):
+        pool = WorkingPool('primary', '127.0.0.1', 256)
+        self.addAsyncCleanup(pool.close)
+        await pool.start()
+        reader, writer = await asyncio.open_connection('127.0.0.1', pool.port)
+        try:
+            writer.write(b'{"id":1,"method":"mining.authorize","params":["test-worker","x"]}\n')
+            await writer.drain()
+            for _ in range(3):
+                await asyncio.wait_for(reader.readline(), 1)
+            pool.silent = True
+            writer.write(b'{"id":2,"method":"mining.subscribe","params":[]}\n')
+            await writer.drain()
+            await pool.publish_work()
+            with self.assertRaises(TimeoutError):
+                await asyncio.wait_for(reader.readline(), .02)
+            self.assertGreater(pool.silent_requests, 0)
+            self.assertTrue(pool.sessions[0].connected)
+            pool.silent = False
+            await pool.publish_work()
+            messages = [json.loads(await asyncio.wait_for(reader.readline(), 1)) for _ in range(2)]
+            self.assertTrue(any(m.get('method') == 'mining.notify' for m in messages))
+        finally:
+            writer.close()
+            await writer.wait_closed()
+
     async def test_resource_limits_fail_closed(self):
         pool = WorkingPool("primary", "127.0.0.1", 256)
         pool._next_sequence = 20001

@@ -34,7 +34,7 @@ physical miner; simulation is never HIL evidence.
 - Bounded HTTP, WebSocket, serial, OTA, and Stratum interfaces.
 - Public-pool observation and local Stratum V1/V2 regression testing.
 - Pool fallback and recovery regression with temporary entries and optional
-  rendered dashboard checks.
+  rendered dashboard and pool settings form checks.
 - Normalized state, telemetry, chart markers, artifacts, privacy, and exact
   source provenance.
 - Local, GitHub Check, and Mining QA Status child-result publication.
@@ -119,6 +119,8 @@ available through its compatibility window.
 ## Changelog
 
 - 2026-09-11: Added opt-in pool fallback, recovery, and settings validation.
+- 2026-09-11: Expanded fallback coverage to sustained transitions, full and
+  silent outages, active edits, and real browser form persistence.
 - 2026-09-04: Added authenticated local Stratum V2 regression coverage.
 - 2026-08-14: Added proposed orchestration v2 and a Testcode-owned loopback mock
   device for Status-owned three-project integration.

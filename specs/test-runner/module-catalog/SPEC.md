@@ -13,6 +13,8 @@ build gates without importing runner code or retyping patterns and options.
 
 ## Changelog
 
+- 2026-09-11: Exposed bounded fallback stability, cycle count, and outage
+  duration options for the expanded regression scenarios.
 - 2026-09-11: Added pool fallback regression with bounded phase timeout and
   share difficulty; enablement and endpoint settings remain in private profiles.
 - 2026-09-04: Added the Stratum V2 regression module with a bounded channel

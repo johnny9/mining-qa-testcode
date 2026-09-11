@@ -170,6 +170,8 @@ class WorkingPool(FakeStratumV1Server):
         self.jobs: dict[str, int] = {}
         self.refresh: asyncio.Task[None] | None = None
         self.limit_error: str | None = None
+        self.silent = False
+        self.silent_requests = 0
 
     def _client_connected(self, reader, writer) -> None:
         if self._next_connection_id + len(self._client_tasks) > 64:
@@ -199,6 +201,9 @@ class WorkingPool(FakeStratumV1Server):
             await super().close()
 
     async def _handle_request(self, session, request) -> None:
+        if self.silent:
+            self.silent_requests += 1
+            return  # Keep TCP open but withhold all protocol responses and jobs.
         await super()._handle_request(session, request)
         if request.method == "mining.authorize":
             await self._send_work(session)
@@ -213,7 +218,7 @@ class WorkingPool(FakeStratumV1Server):
         self.jobs[job.job_id] = self.job_counter
 
     async def publish_work(self) -> None:
-        if not self.available:
+        if not self.available or self.silent:
             return
         authorized = {r.connection_id for r in self.requests if r.method == "mining.authorize"}
         for session in self.sessions:
@@ -310,7 +315,11 @@ class PoolDashboard:
             raise DeviceError("dashboard debugger must remain on loopback")
         from websockets.asyncio.client import connect
         self.socket = await connect(ws_url, open_timeout=5, close_timeout=2, max_size=65536)
+        await self._connected()
         await self.label()  # Verify the page before device writes.
+
+    async def _connected(self) -> None:
+        pass
 
     async def evaluate(self, expression: str) -> Any:
         if self.socket is None:
@@ -354,6 +363,7 @@ async def wait_for_mining(
     pools: TemporaryPools, *, preference: int, fallback: int, timeout: float,
     poll_interval: float, observe: Callable[[dict[str, Any]], None],
     dashboard: PoolDashboard | None = None,
+    stable_seconds: float = 0,
 ) -> Mapping[str, Any]:
     """Require fresh routed work and device acceptance, not a successful probe."""
     after_sequence = pool.requests[-1].sequence if pool.requests else 0
@@ -361,6 +371,7 @@ async def wait_for_mining(
     accepted_baseline: int | None = None
     previous_uptime: float | None = None
     started = time.monotonic()
+    steady: tuple[float, int, int] | None = None
     expected_index = pools.secondary if fallback else pools.primary
     expected_user = pools.entries[expected_index]["stratumUser"]
     await pool.publish_work()
@@ -390,15 +401,31 @@ async def wait_for_mining(
             fresh = any(s.sequence > after_sequence and pool.jobs.get(s.job_id, 0) > after_job
                         and s.username == expected_user and s.connection_id in connected
                         for s in pool.submissions)
-            passed = bool(matches and fresh and accepted_baseline is not None and
-                          shares > accepted_baseline and int(info.get("workReceived", 0)) > 0)
+            candidate = bool(matches and fresh and accepted_baseline is not None and
+                             shares > accepted_baseline and int(info.get("workReceived", 0)) > 0)
+            if not candidate:
+                steady = None
+            elif steady is None:
+                steady = (time.monotonic(), shares, pool.job_counter)
+            elif shares < steady[1]:
+                steady = None
+            steady_elapsed = time.monotonic() - steady[0] if steady else 0
+            later_work = steady is not None and any(
+                pool.jobs.get(s.job_id, 0) > steady[2] and s.username == expected_user
+                and s.connection_id in connected for s in pool.submissions
+            )
+            passed = candidate and (stable_seconds == 0 or bool(
+                steady and steady_elapsed >= stable_seconds and
+                shares > steady[1] and later_work
+            ))
             observe({"elapsed_seconds": round(time.monotonic() - started, 3),
                      "preferred_fallback": info.get("useFallbackStratum"),
                      "active_fallback": info.get("isUsingFallbackStratum"),
                      "primary_index": info.get("primaryPoolIndex"),
                      "secondary_index": info.get("secondaryPoolIndex"),
                      "shares_accepted": shares, "work_received": info.get("workReceived"),
-                     "fresh_submission": fresh, "dashboard_label": label, "passed": passed})
+                     "fresh_submission": fresh, "dashboard_label": label,
+                     "steady_seconds": round(steady_elapsed, 3), "passed": passed})
             if passed:
                 return info
             await asyncio.sleep(poll_interval)

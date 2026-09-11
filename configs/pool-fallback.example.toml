@@ -36,6 +36,9 @@ bind_host = "${MINER_TEST_ADVERTISED_HOST}"
 primary_port = 0
 fallback_port = 0
 phase_timeout = 180
+stable_seconds = 5
+transition_cycles = 3
+outage_seconds = 45
 poll_interval = 1
 share_difficulty = 256
 # Pin these in the ignored local profile for a particular validation target.

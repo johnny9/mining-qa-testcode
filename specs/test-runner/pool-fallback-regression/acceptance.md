@@ -24,6 +24,19 @@
 
 ## Quality attributes
 
+- [x] **TR-FALLBACK-AC-10:** Browser form edits and swaps in both directions
+  survive Save, reload, and a subsequent edit; original rows and masked
+  passwords are excluded by a fail-closed request guard.
+- [x] **TR-FALLBACK-AC-11:** Active-pool edits without role swaps, correcting an
+  unavailable primary, and saves with manually preferred fallback resume
+  mining with the edited identity and intended preference.
+- [x] **TR-FALLBACK-AC-12:** After a bounded outage of both endpoints, restoring
+  either endpoint resumes mining without a manual restart.
+- [x] **TR-FALLBACK-AC-13:** Repeated failover/recovery requires stable
+  fresh-share progression after each transition.
+- [ ] **TR-FALLBACK-AC-14:** A connected primary that stops replying triggers
+  failover within the configured deadline and recovers when replies resume.
+
 - [x] **TR-FALLBACK-AC-07:** Loopback and fake-device tests cover timeout,
   stale evidence, partial setup, cleanup failure, secrets, and selection.
 - [x] **TR-FALLBACK-AC-08:** An authorized Gamma HIL run validates the module,
@@ -65,14 +78,43 @@
   confirmed only the two original rows remained and measured 1049.30 GH/s,
   59.625 degrees C, and new accepted shares. Finalized artifacts passed the
   private-coordinate audit. This completes AC-01, AC-02, AC-06, and AC-08.
-- The passing run qualifies the module against installed firmware `9da165d`;
+- That earlier run qualifies the module against installed firmware `9da165d`;
   it does not establish a result for the PR #1962 firmware image. Settings
   edits used the API; frontend pool-form dirty-state handling was not tested.
 - Integration onto upstream `5f8bbdb` added the module catalog entry while
   preserving newer runner and Stratum changes. All 127 unit tests and
-  wheel/sdist builds passed on that integrated tree. Hardware was not rerun
-  after integration; the hardware evidence above comes from the earlier
+  wheel/sdist builds passed on that integrated tree. Hardware had not yet been
+  rerun at that integration step; the hardware evidence above comes from the earlier
   working checkout with the same fallback fixture and E2E implementation.
+- Subsequent PR #1962 run `20260911T030633.163670Z` passed both original cases
+  and all ten phase checks on Gamma 602 firmware `ede6c13`, in 141.998 s with
+  zero failures, errors, or skips. The image came from CI merge
+  `ede6c132653288553479de4e952885873f184eec`, containing PR head
+  `13d7246b593865b2d8f8cf2600c8c6deb221c59d`. Both cleanups required no restart;
+  independent verification confirmed original settings and fresh shares.
+- Expanded-module unit verification passed all 136 tests, including browser
+  request rejection and payload preservation, real TCP silence, resetting the
+  stability window, and releasing silence before failed-phase cleanup.
+- Expanded PR-firmware run `20260911T040734.262065Z` completed all eight cases
+  on Gamma 602 / BM1370 firmware `ede6c13`: seven passed, one failed, zero
+  errors or skips, in 1142.423 s. There were 33 passing mining phases. Real
+  browser validation completed three guarded saves, both role swaps, reload,
+  and re-edit persistence. Active edits, both independent 45-second full
+  outages, and all three failover/recovery cycles passed. This completes
+  AC-10 through AC-13.
+- AC-14 remains unqualified: the silent connected primary retained selection
+  for 180 s while accepted shares remained at six. Fallback received no fresh
+  submissions; recovery after that assertion was not reached. The regression
+  remains a failure, with no skip or expected-failure conversion. Source
+  inspection found the same SV1 receive-loop blob before and after #1962;
+  that points to an existing limitation, not a demonstrated new PR defect.
+- All eight cleanups restored original settings and fresh shares without a
+  restart. Independent verification confirmed the two original rows and
+  new accepted shares at 1156.29 GH/s and 59.75 degrees C. The browser and
+  listeners were closed. All 106 finalized artifact files passed an audit for
+  target/test-host addresses, target MAC, and original pool worker names.
+- Wheel/sdist builds include the browser helper and expanded module catalog.
+  Specification integrity, maintenance review, and whitespace checks passed.
 
 ## Acceptance rule
 

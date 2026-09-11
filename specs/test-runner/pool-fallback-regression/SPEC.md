@@ -1,7 +1,7 @@
 # Pool fallback regression
 
 Validate pool selection, automatic failover, recovery, and settings edits using
-temporary local pools, with optional rendered dashboard checks.
+temporary local pools, with optional rendered dashboard and pool-form checks.
 
 - **Lifecycle:** supported
 - **Owner:** hardware-test maintainers
@@ -13,6 +13,10 @@ temporary local pools, with optional rendered dashboard checks.
 
 ## Changelog
 
+- 2026-09-11: Extended coverage to active edits, manual fallback preference,
+  correcting an unavailable primary, recovery of either pool after a full
+  outage, repeated transitions, and connected-but-silent endpoints. Added a
+  stable mining window and guarded real-form Save/reload/re-edit validation.
 - 2026-09-11: Defined opt-in fallback scenarios and PR 1957/1962 validation,
   temporary-slot cleanup, fresh-share evidence, and optional dashboard checks.
 - 2026-09-11: Added fixed-port configuration and post-cleanup mining checks.
@@ -25,3 +29,7 @@ temporary local pools, with optional rendered dashboard checks.
   verification confirmed original settings and fresh accepted shares.
 - 2026-09-11: Integrated with current upstream and registered bounded portable
   options in the module catalog; target configuration remains local.
+- 2026-09-11: Expanded Gamma HIL on PR #1962 firmware `ede6c13` passed seven
+  cases and exposed a 180-second silent-pool failover failure. Real browser
+  saves, active edits, full outages, and repeated cycles passed; all eight
+  cleanups restored original mining without a restart.

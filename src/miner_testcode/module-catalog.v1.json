@@ -296,6 +296,36 @@
           "default": 256,
           "minimum": 1,
           "maximum": 65536
+        },
+        {
+          "id": "stable_seconds",
+          "label": "Stable mining window (seconds)",
+          "description": "Require later jobs and accepted shares after settling.",
+          "type": "integer",
+          "required": false,
+          "default": 5,
+          "minimum": 0,
+          "maximum": 60
+        },
+        {
+          "id": "transition_cycles",
+          "label": "Failover cycles",
+          "description": "Number of complete outage and recovery cycles.",
+          "type": "integer",
+          "required": false,
+          "default": 3,
+          "minimum": 2,
+          "maximum": 5
+        },
+        {
+          "id": "outage_seconds",
+          "label": "Two-pool outage (seconds)",
+          "description": "Hold both controlled endpoints unavailable before restoring one.",
+          "type": "integer",
+          "required": false,
+          "default": 45,
+          "minimum": 15,
+          "maximum": 180
         }
       ]
     }

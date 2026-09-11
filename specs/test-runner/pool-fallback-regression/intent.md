@@ -17,7 +17,10 @@ Firmware reviewers, test maintainers, and operators of shared mining hardware.
 ## Desired outcome
 
 A reusable module records manual selection, automatic fallback and recovery,
-and settings-save outcomes with fresh share evidence and verified cleanup.
+and settings-save outcomes with sustained fresh share evidence and verified
+cleanup. It exercises the real form's edit history and persistence, active
+edits without role changes, repeated transitions, silent endpoints, and
+recovery after both pools lose connectivity.
 
 ## Primary flow
 

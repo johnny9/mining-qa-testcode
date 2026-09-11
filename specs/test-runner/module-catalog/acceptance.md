@@ -28,6 +28,10 @@
 
 ## Verification evidence
 
+- 2026-09-11: Added bounded fallback stability, cycle count, and outage duration
+  options. Negative selection tests reject values beyond each new range; the
+  complete unit suite passed 136 tests. Wheel and sdist builds passed and
+  contain the expanded catalog and browser helper.
 - 2026-09-11: Registered the pool fallback module and verified its timeout and
   difficulty bounds. Portable selection rejects enablement and endpoint fields.
   All 127 unit tests and wheel/sdist builds passed after integration onto the
