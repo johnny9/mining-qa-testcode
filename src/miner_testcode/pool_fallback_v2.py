@@ -16,6 +16,7 @@ class MiningSubmission:
     connection_id: int
     job_id: int
     username: str
+    channel_type: str
 
 
 class WorkingV2Pool(FakeStratumV2Server):
@@ -48,7 +49,8 @@ class WorkingV2Pool(FakeStratumV2Server):
             if ((share.connection_id, share.sequence_number) in self._acknowledged and
                     session.open_channel is not None and share.channel_id == session.channel_id):
                 result.append(MiningSubmission(share.sequence, share.connection_id,
-                                               share.job_id, session.open_channel.user_identity))
+                                               share.job_id, session.open_channel.user_identity,
+                                               session.open_channel.channel_type))
         return tuple(result)
 
     def _client_connected(self, reader, writer) -> None:

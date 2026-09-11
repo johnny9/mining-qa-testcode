@@ -37,6 +37,11 @@
 
 ## Verification evidence
 
+- 2026-09-11: The separate pool-fallback module reused this server in Gamma-02
+  master `1df7ba1` HIL. All 18 cases passed across standard and extended channels,
+  including complete silence, failover, recovery, and independent restoration.
+  This qualifies the fallback scenarios; it is not a rerun of the original
+  seven-case ordered protocol suite below.
 - The complete Testcode unit suite passed all 103 tests on 2026-09-04. It
   includes official EllSwift/BIP340 vectors, authenticated loopback Noise,
   both channel types, job/target/share messages, rejection, reconnection,

@@ -254,11 +254,14 @@ class MiningEvidenceTest(unittest.IsolatedAsyncioTestCase):
 
     async def exercise(self, *, fresh=True, worker=True, flags=True, progress=True,
                        old_job=False, disconnected=False, reconnect=False, label="Fallback",
-                       stable_seconds=0, ongoing=False, flap=False):
+                       stable_seconds=0, ongoing=False, flap=False,
+                       channel_type=None, submitted_channel_type=None):
         api = FakeApi()
         pools = TemporaryPools(api, api.read, api.info, read_only=False)
         await pools.install("test-host", 3333, 3334, 256)
         info = {**api.info, "isUsingFallbackStratum": 1, "sharesAccepted": 10, "workReceived": 1}
+        if channel_type is not None:
+            pools.entries[pools.secondary]["stratumV2ChannelType"] = channel_type
         pool = SimpleNamespace(requests=[SimpleNamespace(sequence=10)], job_counter=10,
                                jobs={"old": 1}, submissions=[], sessions=[SimpleNamespace(connection_id=1, connected=not disconnected)])
 
@@ -287,7 +290,7 @@ class MiningEvidenceTest(unittest.IsolatedAsyncioTestCase):
                     pool.jobs[job] = pool.job_counter
                 pool.submissions.append(SimpleNamespace(sequence=10 + calls, job_id="old" if old_job else job,
                     username=pools.entries[pools.secondary]["stratumUser"] if worker else "wrong-worker",
-                    connection_id=1))
+                    connection_id=1, channel_type=submitted_channel_type))
             return result
 
         async def dashboard_label():
@@ -308,6 +311,12 @@ class MiningEvidenceTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_fresh_routed_submission_and_counter_progress_pass(self):
         await self.exercise()
+
+    async def test_wrong_negotiated_sv2_channel_cannot_satisfy_mining_evidence(self):
+        for expected, wrong in (("standard", "extended"), ("extended", "standard")):
+            await self.exercise(channel_type=expected, submitted_channel_type=expected)
+            with self.assertRaises(TimeoutError):
+                await self.exercise(channel_type=expected, submitted_channel_type=wrong)
 
     async def test_transient_reconnect_is_allowed(self):
         await self.exercise(reconnect=True)

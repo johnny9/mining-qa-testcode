@@ -56,6 +56,7 @@ class WorkingV2PoolTest(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(ack.message_type, sv2.SV2_MSG_SUBMIT_SHARES_SUCCESS)
                 self.assertEqual(pool.mining_submissions[0].username, "fallback-regression.primary")
                 self.assertEqual(pool.mining_submissions[0].job_id, job)
+                self.assertEqual(pool.mining_submissions[0].channel_type, channel)
                 connection = pool.sessions[0].connection_id
                 pool.silent = True
                 await self.submit(client, job, 2)

@@ -25,6 +25,8 @@ cannot prove a dashboard fix.
 SV2 standard and extended channels require separate hardware results. This
 module covers SV2-to-SV2 failover; mixed SV1/SV2 endpoint pairs and pools that
 drip partial encrypted frames are outside this qualification.
+Gamma-02 master `1df7ba1` passed both channel modes on 2026-09-11, including
+complete-silence failover in approximately 225 seconds and automatic recovery.
 The pool-form scenario does not validate password edits or every pool protocol
 option. Its request guard intentionally narrows the write to disposable rows;
 it validates real form behavior and firmware responses within that boundary.

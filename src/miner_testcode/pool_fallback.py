@@ -399,6 +399,7 @@ async def wait_for_mining(
     steady: tuple[float, int, int] | None = None
     expected_index = pools.secondary if fallback else pools.primary
     expected_user = pools.entries[expected_index]["stratumUser"]
+    expected_channel = pools.entries[expected_index].get("stratumV2ChannelType")
     await pool.publish_work()
     async with asyncio.timeout(timeout):
         while True:
@@ -424,6 +425,7 @@ async def wait_for_mining(
                 accepted_baseline = shares
             connected = {s.connection_id for s in pool.sessions if s.connected}
             fresh = any(s.sequence > after_sequence and pool.jobs.get(s.job_id, 0) > after_job
+                        and getattr(s, "channel_type", None) == expected_channel
                         and s.username == expected_user and s.connection_id in connected
                         for s in pool.mining_submissions)
             candidate = bool(matches and fresh and accepted_baseline is not None and
@@ -437,6 +439,7 @@ async def wait_for_mining(
             steady_elapsed = time.monotonic() - steady[0] if steady else 0
             later_work = steady is not None and any(
                 pool.jobs.get(s.job_id, 0) > steady[2] and s.username == expected_user
+                and getattr(s, "channel_type", None) == expected_channel
                 and s.connection_id in connected for s in pool.mining_submissions
             )
             passed = candidate and (stable_seconds == 0 or bool(

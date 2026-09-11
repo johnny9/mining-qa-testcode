@@ -61,13 +61,12 @@ It requires the ESP-Miner indexed pool API, detected before any write.
 ### HTTP or external protocols
 
 Use `/api/system/info`, settings PATCH, and indexed-pool DELETE. Local SV1
-endpoints automatically supply work after authorization. Optional browser
-checks work for either protocol. SV2 endpoints generate separate ephemeral
+endpoints automatically supply work after authorization. SV2 endpoints generate separate ephemeral
 authority keys; temporary rows require authentication and the selected channel
 type. Correcting a row's endpoint also updates its disposable authority key.
 SV2 work begins only after authenticated setup and channel negotiation.
-Optional browser
-checks use an operator-started, loopback-only Chrome DevTools endpoint and the
+Optional browser checks work for either protocol using an operator-started,
+loopback-only Chrome DevTools endpoint and the
 existing `websockets` dependency; the module never starts a browser itself.
 
 ### Files, artifacts, payloads, and persistent state
@@ -91,7 +90,8 @@ The stability window resets when selection or mining evidence stops matching;
 it requires another job and additional accepted shares after the first match.
 
 SV2 submissions resolve the worker through their connection and channel-open
-request. Only shares whose success response was sent can satisfy mining
+request. The negotiated channel type must match the selected temporary row.
+Only shares whose success response was sent can satisfy mining
 evidence. Complete silence sends neither jobs nor acknowledgements nor new
 Noise handshakes, without advancing the outbound encryption nonce. The server
 handshake bound is 1,200 seconds so normal client handshake expiry, rather than

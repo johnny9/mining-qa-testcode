@@ -13,10 +13,15 @@ temporary local pools, with optional rendered dashboard and pool-form checks.
 
 ## Changelog
 
+- 2026-09-11: Qualified all 18 SV2 cases and 74 mining phases on Gamma-02
+  with master `1df7ba1`. Both channel modes failed over from complete silence
+  in approximately 225 seconds and recovered primary mining. All cleanups
+  passed without a restart. Added an explicit negotiated-channel guard after
+  auditing the hardware traces for the requested channel modes.
 - 2026-09-11: Added a separate SV2 module that runs the shared scenarios in
   both standard and extended channels with distinct authenticated endpoints.
   Loopback tests cover encrypted silence, reconnects, acceptance evidence,
-  and complete temporary-pool cleanup; hardware qualification is pending.
+  and complete temporary-pool cleanup; subsequent HIL is recorded above.
 - 2026-09-11: Qualified the nine-case module on Gamma-02 with the ESP-Miner
   #1964 receive-timeout fix. All 37 mining phases passed, including short
   silence on the same connection and sustained-silence failover/recovery.

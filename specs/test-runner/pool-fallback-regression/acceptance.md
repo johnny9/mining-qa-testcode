@@ -2,10 +2,10 @@
 
 ## Functional behavior
 
-- [ ] **TR-FALLBACK-AC-16:** The separate SV2 module runs all shared fallback
+- [x] **TR-FALLBACK-AC-16:** The separate SV2 module runs all shared fallback
   scenarios in standard and extended channels with authenticated endpoints,
   current worker/channel-bound accepted shares, and original settings restored.
-- [ ] **TR-FALLBACK-AC-17:** SV2 complete silence suppresses jobs, share ACKs,
+- [x] **TR-FALLBACK-AC-17:** SV2 complete silence suppresses jobs, share ACKs,
   and reconnect handshakes; short silence preserves the same Noise connection,
   and sustained silence fails over and recovers within bounded phases.
 - [x] **TR-FALLBACK-AC-01:** Manual primary/fallback selection and automatic
@@ -57,13 +57,40 @@
 
 ## Verification evidence
 
+- 2026-09-11: Gamma-02 / BM1370 HIL run `20260911T215406.340854Z` used clean
+  testcode `df990b1e1a468b3d0c328c0f52ceafa87a3784a9` and current master
+  `1df7ba1ec12833045693cf1352042e8d78628c22`. All 18 cases passed in
+  2644.904 seconds, with zero failures, errors, or skips: nine cases and
+  37 passing mining phases for each channel type. This includes real browser
+  saves, full outages, repeated transitions, settings edits, and both silence
+  cases. The short silence retained the same encrypted connection in each mode.
+- Extended-channel silent failover reached stable fallback mining after
+  225.064 seconds and recovered primary after 58.574 seconds. Standard-channel
+  failover took 224.766 seconds and recovery 27.133 seconds. Each trace showed
+  one receive failure followed by three failed Noise handshake retries.
+  These are measured complete-silence results, not required exact timings.
+- All 18 cleanups restored original settings and fresh shares without a
+  recovery restart. Independent verification confirmed the two original rows,
+  fresh accepted shares, 974.88 GH/s and 60.125 degrees C on master. All 70
+  channel-open requests and 1,194 submissions in the saved transcripts matched
+  the channel type requested by their case. This completes AC-16 and AC-17.
+- After that run, the mining-evidence predicate was strengthened to reject a
+  wrong negotiated channel type. Hardware traces were audited explicitly for
+  the same condition; the new predicate is separately covered by positive and
+  negative unit tests. The full hardware run above remains pinned to `df990b1`.
+  All 146 final unit tests, wheel/sdist builds, and specification checks passed.
+- The prior firmware `8cdade8b` and original pool configuration were restored
+  after SV2 HIL, with reboot and fresh accepted shares independently verified.
+  The final read measured 1118.81 GH/s and 59.875 degrees C. All 229 finalized
+  run files passed the private-coordinate/original-worker audit; private raw
+  logs remain separate. Both test listeners and the browser were closed.
 - 2026-09-11: All 145 unit tests passed after adding SV2 fallback coverage.
   New tests cover both authenticated channel modes, ACK-bound worker evidence,
   nonce continuity through silence, silent reconnect handshakes, preserved
   ports/authorities after outages, explicit resource errors, invalid settings,
   partial setup cleanup, privacy, and discovery of exactly 18 SV2 cases.
-  Wheel/sdist and specification integrity checks passed. SV2 hardware evidence
-  is pending; prior SV1 HIL below does not qualify these new protocol cases.
+  Wheel/sdist and specification integrity checks passed. SV2 HIL was pending
+  at that step; it is qualified by the later run recorded above.
 - 2026-09-11: The silent-pool fix validation adds separate long-silence budget
   forwarding, invalid catalog bounds, and short-silence fault-release checks.
   All 138 unit tests and wheel/sdist builds passed. The new hardware case and
