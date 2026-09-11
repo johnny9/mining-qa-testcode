@@ -35,6 +35,17 @@ The module catalog exposes both phase timeouts, share difficulty, stability wind
 cycle count, and outage duration. Enablement and device and test-host settings
 remain in your local profile.
 
+For Stratum V2, copy `configs/pool-fallback-v2.example.toml` instead. Select
+`test_pool_fallback_v2_regression.py` and enable
+`tests.pool_fallback_v2_regression.enabled`. This runs the same nine scenarios
+for both standard and extended channels, sequentially on the same two ports.
+The browser and PR-validation opt-ins below apply to both channel types.
+Each endpoint has its own generated authority key and requires authenticated
+Noise. Short silence preserves the encrypted session; sustained silence also
+withholds reconnect handshakes. Each successful transition requires new jobs,
+acknowledged shares from the expected channel worker, and device acceptance
+progress. Original pool authentication settings remain untouched.
+
 The device must already be hashing, be unpaused, and have three unused pool slots. The test creates
 temporary entries, preserves original pool entries and passwords, then restores
 selection and removes the temporary entries after each case.

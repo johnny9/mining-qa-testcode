@@ -2,9 +2,13 @@
 
 ## Components and responsibilities
 
-The E2E module (`tests/e2e/test_pool_fallback_regression.py`) owns scenarios;
+The E2E modules (`tests/e2e/test_pool_fallback_regression.py` and
+`tests/e2e/test_pool_fallback_v2_regression.py`) select the protocol and channel;
+`src/miner_testcode/pool_fallback_cases.py` owns the shared scenarios;
 `src/miner_testcode/pool_fallback.py` owns native indexed-pool
-writes and removal; two fake SV1 endpoints provide work and submission evidence.
+writes and removal; two fake endpoints provide work and submission evidence.
+`src/miner_testcode/pool_fallback_v2.py` reuses the authenticated SV2 server for
+automatic work, outages, complete silence, and channel-bound share evidence.
 The normal runner retains identity, baseline, logs, telemetry, and publication.
 `src/miner_testcode/pool_form.py` drives the real pool settings form and guards
 browser writes so only disposable rows and submitted role indices reach the
@@ -16,6 +20,7 @@ device.
 
 Use `--pattern test_pool_fallback_regression.py`. PR-specific settings coverage
 uses the existing `--validation-pr 1957` or `--validation-pr 1962` selector.
+Use `--pattern test_pool_fallback_v2_regression.py` for both SV2 channel types.
 
 ### Configuration
 
@@ -38,6 +43,11 @@ than both phase deadlines. Zero disables the additional stability requirement.
 Enablement, addresses, ports, browser attachment, and target identity remain
 local profile settings; catalog selection does not authorize hardware writes.
 
+`pool_fallback_v2_regression` is a separate catalog module requiring `http`
+and `stratum-v2`, with the same portable options and an independently enabled
+`tests.pool_fallback_v2_regression` profile. Both standard and extended channels
+run by default, sequentially; no channel mode can be silently omitted.
+
 ### Environment
 
 None required. New temporary slots omit passwords and use the firmware's
@@ -52,6 +62,11 @@ It requires the ESP-Miner indexed pool API, detected before any write.
 
 Use `/api/system/info`, settings PATCH, and indexed-pool DELETE. Local SV1
 endpoints automatically supply work after authorization. Optional browser
+checks work for either protocol. SV2 endpoints generate separate ephemeral
+authority keys; temporary rows require authentication and the selected channel
+type. Correcting a row's endpoint also updates its disposable authority key.
+SV2 work begins only after authenticated setup and channel negotiation.
+Optional browser
 checks use an operator-started, loopback-only Chrome DevTools endpoint and the
 existing `websockets` dependency; the module never starts a browser itself.
 
@@ -74,6 +89,14 @@ write. Settings-save validation permits a reconnect. Cleanup selects original
 rows before deleting owned temporary rows and verifies the original table.
 The stability window resets when selection or mining evidence stops matching;
 it requires another job and additional accepted shares after the first match.
+
+SV2 submissions resolve the worker through their connection and channel-open
+request. Only shares whose success response was sent can satisfy mining
+evidence. Complete silence sends neither jobs nor acknowledgements nor new
+Noise handshakes, without advancing the outbound encryption nonce. The server
+handshake bound is 1,200 seconds so normal client handshake expiry, rather than
+a short test-server timeout, drives the silence regression. Short silence must
+resume on the same encrypted session. No specific retry count is required.
 
 The browser case edits a worker and causes a secondary-role collision, saves,
 then edits and causes the opposite primary-role collision in the same form
@@ -142,6 +165,9 @@ Ordinary phase deadlines (5–300 seconds), the silent failover deadline
 lines, at most 64 accepted connections, 20,000 client requests, and
 4,096 jobs per endpoint bound execution and evidence. Bind to a trusted
 reachable lab interface.
+SV2 uses 2 KiB plaintext frames, 64 accepted connections, 20,000 events,
+4,096 jobs, and the same scenario/cleanup deadlines. Exhausted evidence or
+connection limits are explicit infrastructure errors, never a passing phase.
 The browser guard allows at most 1,024 API requests and eight saves, 32 KiB
 write bodies, eight pending commands, and 32 guard acknowledgements. CDP
 messages retain the 64 KiB limit; commands and form waits are bounded.
@@ -151,6 +177,7 @@ messages retain the 64 KiB limit; commands and form waits are bounded.
 - [Lifecycle and cleanup](../lifecycle-and-cleanup/SPEC.md): final restoration.
 - [ESP-Miner device adapters](../esp-miner-device-adapters/SPEC.md): native API.
 - [Stratum V1 regression](../stratum-v1-regression/SPEC.md): reusable fake pool.
+- [Stratum V2 regression](../stratum-v2-regression/SPEC.md): authenticated fake pool.
 - [Configuration and selection](../configuration-and-selection/SPEC.md): opt-in.
 - [Module catalog](../module-catalog/SPEC.md): discovery and bounded portable options.
 - [Artifacts, privacy, and provenance](../artifacts-privacy-and-provenance/SPEC.md): evidence.
@@ -158,6 +185,6 @@ messages retain the 64 KiB limit; commands and form waits are bounded.
 
 ## Verification approach
 
-Fake-device negative/cleanup checks and loopback SV1 tests precede HIL. Compare
+Fake-device negative/cleanup checks and loopback SV1/SV2 tests precede HIL. Compare
 phase decisions against both reconnecting and probing simulations. Identify
 Gamma firmware before mutation and independently check post-run restoration.

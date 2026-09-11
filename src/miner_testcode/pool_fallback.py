@@ -75,7 +75,9 @@ class TemporaryPools:
         self.primary, self.secondary = self.ids[:2]
 
     async def install(self, host: str, primary_port: int, fallback_port: int,
-                      difficulty: int) -> None:
+                      difficulty: int, *, protocol: str = "SV1",
+                      channel_type: str | None = None,
+                      authority_keys: tuple[str, str] | None = None) -> None:
         # Validate all values before ownership or any write. Existing rows are
         # never copied into outgoing data, including masked password fields.
         if not isinstance(host, str) or not host.strip() or any(x in host for x in ("*", "<", ">", "${", "/", " ")):
@@ -85,15 +87,34 @@ class TemporaryPools:
                 raise ConfigError("invalid temporary pool port")
         if type(difficulty) is not int or not 1 <= difficulty <= 65536:
             raise ConfigError("invalid temporary pool difficulty")
-        for index, label, port in zip(self.ids, ("primary", "fallback", "idle"),
-                                      (primary_port, fallback_port, fallback_port)):
+        if protocol not in ("SV1", "SV2"):
+            raise ConfigError("temporary pool protocol must be SV1 or SV2")
+        if protocol == "SV1" and (channel_type is not None or authority_keys is not None):
+            raise ConfigError("SV2 settings require protocol SV2")
+        if protocol == "SV2":
+            alphabet = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+            if (channel_type not in ("standard", "extended") or
+                    not isinstance(authority_keys, tuple) or len(authority_keys) != 2 or
+                    any(not isinstance(key, str) or not 50 <= len(key) <= 60 or
+                        any(c not in alphabet for c in key) for key in authority_keys)):
+                raise ConfigError("SV2 requires a channel type and two disposable authority keys")
+        for position, (index, label, port) in enumerate(zip(
+                self.ids, ("primary", "fallback", "idle"),
+                (primary_port, fallback_port, fallback_port))):
             self.entries[index] = {
-                "id": index, "stratumProtocol": "SV1", "stratumURL": host,
+                "id": index, "stratumProtocol": protocol, "stratumURL": host,
                 "stratumPort": port, "stratumUser": f"fallback-regression.{label}",
                 "stratumSuggestedDifficulty": difficulty, "stratumTLS": 0,
                 "stratumCert": "", "stratumExtranonceSubscribe": False,
                 "stratumDecodeCoinbase": True,
             }
+            if protocol == "SV2":
+                assert authority_keys is not None
+                self.entries[index].update(
+                    stratumV2ChannelType=channel_type,
+                    stratumV2AuthorityPubkey=authority_keys[min(position, 1)],
+                    stratumV2RequireAuth=True,
+                )
         current = await self.read_info()
         if pool_table(current) != self.original or any(
             current.get(key) != value for key, value in self.baseline.items()
@@ -172,6 +193,10 @@ class WorkingPool(FakeStratumV1Server):
         self.limit_error: str | None = None
         self.silent = False
         self.silent_requests = 0
+
+    @property
+    def mining_submissions(self):
+        return self.submissions
 
     def _client_connected(self, reader, writer) -> None:
         if self._next_connection_id + len(self._client_tasks) > 64:
@@ -400,7 +425,7 @@ async def wait_for_mining(
             connected = {s.connection_id for s in pool.sessions if s.connected}
             fresh = any(s.sequence > after_sequence and pool.jobs.get(s.job_id, 0) > after_job
                         and s.username == expected_user and s.connection_id in connected
-                        for s in pool.submissions)
+                        for s in pool.mining_submissions)
             candidate = bool(matches and fresh and accepted_baseline is not None and
                              shares > accepted_baseline and int(info.get("workReceived", 0)) > 0)
             if not candidate:
@@ -412,7 +437,7 @@ async def wait_for_mining(
             steady_elapsed = time.monotonic() - steady[0] if steady else 0
             later_work = steady is not None and any(
                 pool.jobs.get(s.job_id, 0) > steady[2] and s.username == expected_user
-                and s.connection_id in connected for s in pool.submissions
+                and s.connection_id in connected for s in pool.mining_submissions
             )
             passed = candidate and (stable_seconds == 0 or bool(
                 steady and steady_elapsed >= stable_seconds and

@@ -25,8 +25,12 @@ recovery after both pools lose connectivity.
 ## Primary flow
 
 Capture the normal device baseline; allocate three unused pool slots; exercise
-two controlled SV1 endpoints; restore selection; delete temporary entries;
+two controlled SV1 or authenticated SV2 endpoints; restore selection; delete temporary entries;
 verify original settings and resumed mining.
+
+The SV2 module repeats the scenarios in both standard and extended channels.
+Each endpoint has a separate authority, so pool edits and role swaps also
+exercise selection of the correct authentication settings.
 
 ## Alternate and failure flows
 

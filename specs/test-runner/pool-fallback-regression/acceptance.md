@@ -2,6 +2,12 @@
 
 ## Functional behavior
 
+- [ ] **TR-FALLBACK-AC-16:** The separate SV2 module runs all shared fallback
+  scenarios in standard and extended channels with authenticated endpoints,
+  current worker/channel-bound accepted shares, and original settings restored.
+- [ ] **TR-FALLBACK-AC-17:** SV2 complete silence suppresses jobs, share ACKs,
+  and reconnect handshakes; short silence preserves the same Noise connection,
+  and sustained silence fails over and recovers within bounded phases.
 - [x] **TR-FALLBACK-AC-01:** Manual primary/fallback selection and automatic
   failover/recovery require matching preference/active flags plus fresh work,
   a new submission at the expected server, and device acceptance progression.
@@ -51,6 +57,13 @@
 
 ## Verification evidence
 
+- 2026-09-11: All 145 unit tests passed after adding SV2 fallback coverage.
+  New tests cover both authenticated channel modes, ACK-bound worker evidence,
+  nonce continuity through silence, silent reconnect handshakes, preserved
+  ports/authorities after outages, explicit resource errors, invalid settings,
+  partial setup cleanup, privacy, and discovery of exactly 18 SV2 cases.
+  Wheel/sdist and specification integrity checks passed. SV2 hardware evidence
+  is pending; prior SV1 HIL below does not qualify these new protocol cases.
 - 2026-09-11: The silent-pool fix validation adds separate long-silence budget
   forwarding, invalid catalog bounds, and short-silence fault-release checks.
   All 138 unit tests and wheel/sdist builds passed. The new hardware case and

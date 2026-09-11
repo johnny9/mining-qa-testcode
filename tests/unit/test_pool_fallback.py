@@ -211,7 +211,7 @@ class MiningEvidenceTest(unittest.IsolatedAsyncioTestCase):
         case.device = SimpleNamespace(current_info=AsyncMock())
         case.pools = None
         case.phase_timeout, case.poll_interval, case.dashboard = 5, 1, None
-        with patch("tests.e2e.test_pool_fallback_regression.wait_for_mining", new=AsyncMock(side_effect=TimeoutError)):
+        with patch("miner_testcode.pool_fallback_cases.wait_for_mining", new=AsyncMock(side_effect=TimeoutError)):
             with self.assertRaisesRegex(DeviceError, "local-pool setup"):
                 await case._phase("initial-primary", None, preference=0, fallback=0)
 
@@ -236,7 +236,7 @@ class MiningEvidenceTest(unittest.IsolatedAsyncioTestCase):
         case.device = SimpleNamespace(current_info=AsyncMock())
         case.pools = None
         case.phase_timeout, case.poll_interval, case.dashboard = 180, 1, None
-        with patch('tests.e2e.test_pool_fallback_regression.wait_for_mining', new_callable=AsyncMock) as wait:
+        with patch('miner_testcode.pool_fallback_cases.wait_for_mining', new_callable=AsyncMock) as wait:
             await case._phase('silent-primary-fallback', None, preference=0, fallback=1, timeout=900)
         self.assertEqual(wait.await_args.kwargs['timeout'], 900)
 
@@ -261,6 +261,8 @@ class MiningEvidenceTest(unittest.IsolatedAsyncioTestCase):
         info = {**api.info, "isUsingFallbackStratum": 1, "sharesAccepted": 10, "workReceived": 1}
         pool = SimpleNamespace(requests=[SimpleNamespace(sequence=10)], job_counter=10,
                                jobs={"old": 1}, submissions=[], sessions=[SimpleNamespace(connection_id=1, connected=not disconnected)])
+
+        pool.mining_submissions = pool.submissions
 
         async def publish():
             pool.job_counter += 1

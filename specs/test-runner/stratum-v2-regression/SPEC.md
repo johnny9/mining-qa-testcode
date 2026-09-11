@@ -5,7 +5,7 @@ Stratum V2 server over an authenticated Noise session.
 
 - **Lifecycle:** supported
 - **Owner:** hardware-test maintainers
-- **Last reconciled:** 2026-09-04
+- **Last reconciled:** 2026-09-11
 - **Spec ID:** TR-STRATUM-V2
 
 [Intent](intent.md) · [Acceptance](acceptance.md) · [Design](design.md) ·
@@ -13,6 +13,9 @@ Stratum V2 server over an authenticated Noise session.
 
 ## Changelog
 
+- 2026-09-11: Reused the authenticated server in the separate pool-fallback
+  module for both channel modes, complete silence, and endpoint recovery.
+  The original ordered protocol suite remains unchanged.
 - 2026-09-04: Completed authorized Gamma 602 HIL with all seven ordered cases
   passing, verified independent post-cleanup mining, and taught restart
   readiness to read SV2 authentication from the primary pool when its flat API

@@ -13,6 +13,10 @@ temporary local pools, with optional rendered dashboard and pool-form checks.
 
 ## Changelog
 
+- 2026-09-11: Added a separate SV2 module that runs the shared scenarios in
+  both standard and extended channels with distinct authenticated endpoints.
+  Loopback tests cover encrypted silence, reconnects, acceptance evidence,
+  and complete temporary-pool cleanup; hardware qualification is pending.
 - 2026-09-11: Qualified the nine-case module on Gamma-02 with the ESP-Miner
   #1964 receive-timeout fix. All 37 mining phases passed, including short
   silence on the same connection and sustained-silence failover/recovery.

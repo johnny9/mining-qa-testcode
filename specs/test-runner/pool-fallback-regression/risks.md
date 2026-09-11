@@ -22,9 +22,17 @@ unused IDs. Only the authorized test owns the device during its execution.
 
 Additional device families require separate HIL qualification; API-only runs
 cannot prove a dashboard fix.
+SV2 standard and extended channels require separate hardware results. This
+module covers SV2-to-SV2 failover; mixed SV1/SV2 endpoint pairs and pools that
+drip partial encrypted frames are outside this qualification.
 The pool-form scenario does not validate password edits or every pool protocol
 option. Its request guard intentionally narrows the write to disposable rows;
 it validates real form behavior and firmware responses within that boundary.
+
+An SV2 channel carries the worker identity established at channel open, not in
+each share. Evidence must bind accepted shares to that connection and channel.
+Each endpoint's distinct authority must follow endpoint corrections; otherwise
+a test setup mistake can resemble a firmware recovery failure.
 
 ## Failure modes
 

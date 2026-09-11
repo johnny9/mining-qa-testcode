@@ -28,6 +28,9 @@
 
 ## Verification evidence
 
+- 2026-09-11: The SV2 fallback module declares `http` and `stratum-v2`, reuses
+  the bounded fallback options, and discovers both channel modes. All 145
+  unit tests and wheel/sdist builds passed with the expanded catalog.
 - 2026-09-11: Added bounded fallback stability, cycle count, and outage duration
   options. Negative selection tests reject values beyond each new range; the
   complete unit suite passed 136 tests. Wheel and sdist builds passed and

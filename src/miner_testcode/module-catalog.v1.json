@@ -338,6 +338,78 @@
           "maximum": 180
         }
       ]
+    },
+    {
+      "id": "pool_fallback_v2_regression",
+      "name": "Stratum V2 pool fallback regression",
+      "description": "Validate authenticated SV2 fallback, silence, recovery, and pool settings in both standard and extended channels.",
+      "test_pattern": "test_pool_fallback_v2_regression.py",
+      "required_capabilities": [
+        "http",
+        "stratum-v2"
+      ],
+      "options": [
+        {
+          "id": "phase_timeout",
+          "label": "Phase timeout (seconds)",
+          "description": "Maximum wait for correct pool selection and fresh accepted shares.",
+          "type": "integer",
+          "required": false,
+          "default": 180,
+          "minimum": 5,
+          "maximum": 300
+        },
+        {
+          "id": "silent_phase_timeout",
+          "label": "Silent pool phase timeout (seconds)",
+          "description": "Allow the receive inactivity deadline and existing connection retries before failover.",
+          "type": "integer",
+          "required": false,
+          "default": 900,
+          "minimum": 5,
+          "maximum": 1200
+        },
+        {
+          "id": "share_difficulty",
+          "label": "Share difficulty",
+          "description": "Difficulty supplied by the temporary test pools.",
+          "type": "integer",
+          "required": false,
+          "default": 256,
+          "minimum": 1,
+          "maximum": 65536
+        },
+        {
+          "id": "stable_seconds",
+          "label": "Stable mining window (seconds)",
+          "description": "Require later jobs and accepted shares after settling.",
+          "type": "integer",
+          "required": false,
+          "default": 5,
+          "minimum": 0,
+          "maximum": 60
+        },
+        {
+          "id": "transition_cycles",
+          "label": "Failover cycles",
+          "description": "Number of complete outage and recovery cycles.",
+          "type": "integer",
+          "required": false,
+          "default": 3,
+          "minimum": 2,
+          "maximum": 5
+        },
+        {
+          "id": "outage_seconds",
+          "label": "Two-pool outage (seconds)",
+          "description": "Hold both controlled endpoints unavailable before restoring one.",
+          "type": "integer",
+          "required": false,
+          "default": 45,
+          "minimum": 15,
+          "maximum": 180
+        }
+      ]
     }
   ]
 }

@@ -113,6 +113,7 @@ wait and shutdown path is bounded.
 
 | Related feature | Relationship |
 |---|---|
+| [Pool fallback regression](../pool-fallback-regression/SPEC.md) | Reuses the server for both-channel authenticated failover, silence, and recovery. |
 | [Module catalog](../module-catalog/SPEC.md) | Publishes the selectable module and safe portable options. |
 | [Device capability contract](../device-capability-contract/SPEC.md) | Supplies the distinct SV2 capability. |
 | [ESP-Miner device adapters](../esp-miner-device-adapters/SPEC.md) | Owns native protocol/channel/auth fields. |

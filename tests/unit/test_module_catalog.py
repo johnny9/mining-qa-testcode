@@ -23,6 +23,7 @@ class ModuleCatalogTest(unittest.TestCase):
                 "stratum_v1_regression",
                 "stratum_v2_regression",
                 "pool_fallback_regression",
+                "pool_fallback_v2_regression",
             ],
         )
         public_pool = catalog.module("public_pool_smoke")

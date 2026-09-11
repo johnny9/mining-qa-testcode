@@ -16,7 +16,7 @@ slices, not source-directory mirrors.
 | `test-runner` | Public pool smoke | supported | [SPEC.md](test-runner/public-pool-smoke/SPEC.md) | Verify pool protocol reachability and stable mining with optional device reconfiguration. |
 | `test-runner` | Stratum V1 regression | supported | [SPEC.md](test-runner/stratum-v1-regression/SPEC.md) | Exercise deterministic miner-client protocol behavior against a local fake pool. |
 | `test-runner` | Stratum V2 regression | supported | [SPEC.md](test-runner/stratum-v2-regression/SPEC.md) | Exercise authenticated encrypted miner-client behavior against a local fake SV2 pool. |
-| `test-runner` | Pool fallback regression | supported | [SPEC.md](test-runner/pool-fallback-regression/SPEC.md) | Validate pool transitions, outages, settings edits, and browser saves with temporary pools and verified cleanup. |
+| `test-runner` | Pool fallback regression | supported | [SPEC.md](test-runner/pool-fallback-regression/SPEC.md) | Validate SV1 and authenticated SV2 pool transitions, outages, settings edits, and browser saves with verified cleanup. |
 | `test-runner` | Artifacts, privacy, and provenance | supported | [SPEC.md](test-runner/artifacts-privacy-and-provenance/SPEC.md) | Preserve useful evidence without leaking identities, secrets, or local coordinates. |
 | `test-runner` | Result model and publishing | supported | [SPEC.md](test-runner/result-model-and-publishing/SPEC.md) | Aggregate native unittest outcomes and publish local or remote child results. |
 | `test-runner` | Orchestration v2 | supported | [SPEC.md](test-runner/orchestration-v2/SPEC.md) | Carry strict distributed correlation through the private pointer and sanitized child result. |

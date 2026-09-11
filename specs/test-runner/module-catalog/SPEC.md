@@ -13,6 +13,8 @@ build gates without importing runner code or retyping patterns and options.
 
 ## Changelog
 
+- 2026-09-11: Registered authenticated SV2 pool fallback with the existing
+  bounded fallback options and a distinct `stratum-v2` capability requirement.
 - 2026-09-11: Exposed bounded fallback stability, cycle count, and outage
   duration options for the expanded regression scenarios.
 - 2026-09-11: Added pool fallback regression with bounded phase timeout and
