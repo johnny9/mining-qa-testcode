@@ -151,6 +151,10 @@ handshake_timeout = 45
 share_timeout = 45
 reconnect_timeout = 45
 accept_timeout = 20
+healthy_reconnect_cycles = 3
+job_burst_count = 24
+# BZM work supports forward timestamp offsets through 60 seconds.
+max_ntime_roll_seconds = 60
 
 [tests.stratum_v2_regression]
 # Use the test host's LAN address. The fake listener generates a fresh

@@ -61,13 +61,19 @@ port = 0
 allow_existing_device_password = false
 share_difficulty = 256
 changed_difficulty = 512
+healthy_reconnect_cycles = 3
+job_burst_count = 24
+# For Bonanza/BZM, opt into its hardware timestamp rolling range.
+max_ntime_roll_seconds = 60
 ```
 
 - `advertised_host` is the test computer's address as seen by the miner.
 - `bind_host` selects the local interfaces on which the fake pool listens.
 - `port = 0` asks the operating system to choose an available port.
 - the two difficulty values are used before and after a difficulty-change
-  check.
+  check;
+- `max_ntime_roll_seconds` defaults to 0 (exact timestamps). Set 60 for BZM;
+  backward timestamps and values outside the configured range still fail.
 
 Run only the regression module:
 
@@ -119,6 +125,27 @@ miner-test --config config.local.toml --validation-pr 1849
 ```
 
 Cases that were not selected are reported as neutral skips.
+
+PR 1897 adds five high-value device scenarios:
+
+1. version bits are absent while BIP310 is pending or rejected and appear only
+   after acceptance;
+2. zero-length extranonce2 still produces an accepted share;
+3. at least three healthy `client.reconnect` cycles return to the same pool;
+4. oversized job IDs and coinbase fields are rejected without changing work
+   state;
+5. the latest clean job remains valid after a bounded job burst.
+
+Enable them with:
+
+```bash
+miner-test --config config.local.toml --validation-pr 1897 \
+  --pattern 'test_stratum_v1_regression.py'
+```
+
+`healthy_reconnect_cycles` is bounded to 3–10 and `job_burst_count` to 12–64.
+These cases perform real device writes through the normal lifecycle and must
+only run on an authorized target with a restorable pool baseline.
 
 ## Use the fake pool from another test
 

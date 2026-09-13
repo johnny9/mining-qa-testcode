@@ -19,7 +19,9 @@ No new CLI flags. Existing selection and exit codes remain unchanged.
 
 Private TOML remains authoritative for device coordinates, credentials, pool
 identity, and Lab-specific defaults. A portable overlay may replace only keys
-declared by the selected module.
+declared by the selected module. SV1 exposes `max_ntime_roll_seconds`
+(0–120, default 0), `healthy_reconnect_cycles` (3–10, default 3), and
+`job_burst_count` (12–64, default 24). These options do not enable PR cases.
 
 ### Environment
 

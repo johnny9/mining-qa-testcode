@@ -52,15 +52,34 @@ class MiningJob:
             raise ValueError("job_id must contain 1 through 31 UTF-8 bytes")
 
     @classmethod
-    def standard(cls, job_id: str, *, clean_jobs: bool = True) -> MiningJob:
+    def standard(
+        cls, job_id: str, *, clean_jobs: bool = True,
+        extranonce1_size: int = 7, extranonce2_size: int = 8,
+    ) -> MiningJob:
+        for size in (extranonce1_size, extranonce2_size):
+            if type(size) is not int or not 0 <= size <= 32:
+                raise ValueError("fixture extranonce sizes must be integers in 0..32")
+        prefix = bytearray.fromhex(STANDARD_COINBASE_1)
+        script_size = prefix[41] - 15 + extranonce1_size + extranonce2_size
+        if script_size > 100:
+            raise ValueError("fixture extranonces exceed the coinbase scriptSig limit")
+        prefix[41] = script_size
         return cls(
             job_id=job_id,
+            coinbase_1=prefix.hex(),
             ntime=f"{int(time.time()) & 0xFFFFFFFF:08x}",
             clean_jobs=clean_jobs,
         )
 
     def with_changes(self, **changes: Any) -> MiningJob:
         return replace(self, **changes)
+
+    def with_fixed_extranonce2(self, extranonce2: str) -> MiningJob:
+        """Keep the solved coinbase bytes while moving extranonce2 into suffix."""
+        if (len(extranonce2) % 2 or len(extranonce2) > 64
+                or any(c not in "0123456789abcdefABCDEF" for c in extranonce2)):
+            raise ValueError("fixed extranonce2 must encode at most 32 bytes of hex")
+        return replace(self, coinbase_2=extranonce2 + self.coinbase_2)
 
     def notification(self) -> dict[str, Any]:
         return {
@@ -187,6 +206,7 @@ class FakeStratumV1Server:
         extranonce1: str = "01020304050607",
         extranonce2_size: int = 8,
         version_mask: str = "1fffe000",
+        configure_response: bool | None = True,
         accept_submissions: bool = True,
         submission_policy: SubmissionPolicy | None = None,
         client_line_limit: int = 1 << 20,
@@ -197,6 +217,10 @@ class FakeStratumV1Server:
             raise ValueError("extranonce1 must be even-length hex up to 32 bytes")
         if len(version_mask) != 8:
             raise ValueError("version_mask must be exactly four bytes of hex")
+        if configure_response is not None and not isinstance(
+            configure_response, bool
+        ):
+            raise ValueError("configure_response must be true, false, or None")
         try:
             bytes.fromhex(extranonce1)
             bytes.fromhex(version_mask)
@@ -208,6 +232,7 @@ class FakeStratumV1Server:
         self.extranonce1 = extranonce1
         self.extranonce2_size = extranonce2_size
         self.version_mask = version_mask
+        self.configure_response = configure_response
         self.accept_submissions = accept_submissions
         self.submission_policy = submission_policy
         self.client_line_limit = client_line_limit
@@ -372,14 +397,18 @@ class FakeStratumV1Server:
         method = request.method
         message_id = request.message_id
         if method == "mining.configure":
-            await self.send_response(
-                message_id,
-                {
-                    "version-rolling": True,
-                    "version-rolling.mask": self.version_mask,
-                },
-                session=session,
-            )
+            if self.configure_response is None:
+                await self._record_event(
+                    "configure_deferred",
+                    connection_id=session.connection_id,
+                    message_id=message_id,
+                )
+            else:
+                await self.send_configure_response(
+                    message_id,
+                    accepted=self.configure_response,
+                    session=session,
+                )
         elif method == "mining.subscribe":
             subscription_id = f"fake-{session.connection_id:08x}"
             await self.send_response(
@@ -435,6 +464,26 @@ class FakeStratumV1Server:
             session=session,
             fragment_sizes=fragment_sizes,
             label="response",
+        )
+
+    async def send_configure_response(
+        self,
+        message_id: int | str | None,
+        *,
+        accepted: bool,
+        session: StratumSession | int | None = None,
+        fragment_sizes: Sequence[int] | None = None,
+    ) -> None:
+        """Reply to BIP310 configuration, including an explicit rejection."""
+
+        result: dict[str, Any] = {"version-rolling": accepted}
+        if accepted:
+            result["version-rolling.mask"] = self.version_mask
+        await self.send_response(
+            message_id,
+            result,
+            session=session,
+            fragment_sizes=fragment_sizes,
         )
 
     async def send_notification(

@@ -4,6 +4,7 @@ import asyncio
 import inspect
 import json
 import os
+import time
 from collections.abc import Mapping
 from typing import Any
 
@@ -102,6 +103,7 @@ class StratumV1RegressionTest(MinerTestCase):
         self,
     ) -> tuple[FakeStratumV1Server, Mapping[str, Any], str]:
         settings = self.settings_for("stratum_v1_regression")
+        self._max_ntime_roll_seconds()
         advertised_host = str(settings.get("advertised_host", "")).strip()
         if not advertised_host:
             self.fail(
@@ -156,14 +158,29 @@ class StratumV1RegressionTest(MinerTestCase):
         server: FakeStratumV1Server,
         settings: Mapping[str, Any],
         username: str,
-        *,
-        connection_id: int | None = None,
     ) -> StratumHandshake:
-        handshake = await server.wait_for_handshake(
-            connection_id=connection_id,
-            require_configure=True,
-            timeout=float(settings.get("handshake_timeout", 45.0)),
-        )
+        timeout = float(settings.get("handshake_timeout", 45.0))
+        after_connection = 0
+        async with asyncio.timeout(timeout):
+            while True:
+                # Settings can reconnect the old boot just before the adapter
+                # restarts it. That socket may appear open until our first
+                # write; select the newest session and prove it responds.
+                candidates = [s for s in server.sessions
+                              if s.connected and s.connection_id > after_connection]
+                session = (max(candidates, key=lambda s: s.connection_id) if candidates else
+                           await server.wait_for_connection(after_connection_id=after_connection,
+                                                            timeout=timeout))
+                after_connection = session.connection_id
+                handshake = await server.wait_for_handshake(
+                    connection_id=session.connection_id, require_configure=True, timeout=timeout)
+                try:
+                    await self._processing_barrier(
+                        server, session.connection_id, 10_000 + session.connection_id,
+                        timeout=min(2.0, timeout / 4))
+                except (ConnectionError, TimeoutError):
+                    continue
+                break
         authorize_params = handshake.authorize.params
         self.assertIsNotNone(authorize_params)
         assert authorize_params is not None
@@ -196,6 +213,19 @@ class StratumV1RegressionTest(MinerTestCase):
             timeout=timeout,
         )
 
+    def _max_ntime_roll_seconds(self) -> int:
+        value = self.settings_for("stratum_v1_regression").get("max_ntime_roll_seconds", 0)
+        if isinstance(value, bool) or not isinstance(value, int) or not 0 <= value <= 120:
+            raise ValueError("max_ntime_roll_seconds must be an integer from 0 to 120")
+        return value
+
+    def _assert_submission_ntime(self, submitted: str, job_ntime: str) -> None:
+        self.assertRegex(submitted, r"^[0-9a-fA-F]{8}$")
+        offset = int(submitted, 16) - int(job_ntime, 16)
+        self.assertGreaterEqual(offset, 0, "share timestamp predates its job")
+        self.assertLessEqual(offset, self._max_ntime_roll_seconds(),
+                             "share timestamp exceeds configured rolling allowance")
+
     async def _mine_one_share(
         self,
         server: FakeStratumV1Server,
@@ -221,8 +251,8 @@ class StratumV1RegressionTest(MinerTestCase):
             after_sequence=after,
             timeout=timeout,
         )
-        self.assertEqual(submission.ntime.lower(), job.ntime.lower())
-        self.assertRegex(submission.extranonce2, r"^[0-9a-fA-F]+$")
+        self._assert_submission_ntime(submission.ntime, job.ntime)
+        self.assertRegex(submission.extranonce2, r"^[0-9a-fA-F]*$")
         self.assertRegex(submission.nonce, r"^[0-9a-fA-F]{8}$")
         if submission.version_bits is not None:
             self.assertRegex(submission.version_bits, r"^[0-9a-fA-F]{8}$")
@@ -236,7 +266,7 @@ class StratumV1RegressionTest(MinerTestCase):
     ) -> None:
         await server.send_job(
             MiningJob.standard(f"park-{sequence}"),
-            difficulty=1.0e12,
+            difficulty=float(0xffffffff),
             session=connection_id,
         )
         await self._processing_barrier(
@@ -254,15 +284,35 @@ class StratumV1RegressionTest(MinerTestCase):
                     return
                 await asyncio.sleep(0.25)
 
+    async def _reconnect_with_configure_response(
+        self,
+        server: FakeStratumV1Server,
+        handshake: StratumHandshake,
+        settings: Mapping[str, Any],
+        *,
+        configure_response: bool | None,
+    ) -> StratumHandshake:
+        server.configure_response = configure_response
+        previous_connection = handshake.connection_id
+        await server.send_notification(
+            "client.reconnect", [], session=previous_connection
+        )
+        return await server.wait_for_handshake(
+            after_connection_id=previous_connection,
+            require_configure=True,
+            timeout=float(settings.get("reconnect_timeout", 45.0)),
+        )
+
     async def _case_01_configure_extension_negotiation(
         self,
         server: FakeStratumV1Server,
         settings: Mapping[str, Any],
     ) -> None:
-        request = await server.wait_for_request(
-            "mining.configure",
-            timeout=float(settings.get("handshake_timeout", 45.0)),
-        )
+        type(self)._handshake = await self._wait_for_handshake(
+            server, settings, type(self)._username)
+        request = type(self)._handshake.configure
+        self.assertIsNotNone(request)
+        assert request is not None
         self.assertIsNotNone(request.params)
         assert request.params is not None
         self.assertGreaterEqual(len(request.params), 1)
@@ -275,10 +325,7 @@ class StratumV1RegressionTest(MinerTestCase):
         server: FakeStratumV1Server,
         settings: Mapping[str, Any],
     ) -> None:
-        request = await server.wait_for_request(
-            "mining.subscribe",
-            timeout=float(settings.get("handshake_timeout", 45.0)),
-        )
+        request = type(self)._handshake.subscribe
         self.assertIsNotNone(request.params)
         assert request.params is not None
         self.assertGreaterEqual(len(request.params), 1)
@@ -292,25 +339,14 @@ class StratumV1RegressionTest(MinerTestCase):
         settings: Mapping[str, Any],
         username: str,
     ) -> StratumHandshake:
-        connection_id = server.latest_connection_id
-        self.assertIsNotNone(connection_id)
-        request = await server.wait_for_request(
-            "mining.authorize",
-            connection_id=connection_id,
-            timeout=float(settings.get("handshake_timeout", 45.0)),
-        )
+        request = type(self)._handshake.authorize
         self.assertIsNotNone(request.params)
         assert request.params is not None
         self.assertGreaterEqual(len(request.params), 2)
         self.assertEqual(request.params[0], username)
         self.assertEqual(request.params[1], "<redacted>")
         self.logger.info("mining.authorize completed")
-        return await self._wait_for_handshake(
-            server,
-            settings,
-            username,
-            connection_id=connection_id,
-        )
+        return type(self)._handshake
 
     async def _case_04_mining_notify_and_accepted_share(
         self,
@@ -368,7 +404,7 @@ class StratumV1RegressionTest(MinerTestCase):
         self.assertGreater(changed_difficulty, 0)
         self.assertNotEqual(changed_difficulty, initial_difficulty)
 
-        job = MiningJob.standard("fresh-after-diff")
+        job = MiningJob.standard("work-after-difficulty")
         server.submission_policy = lambda submission: submission.job_id == job.job_id
         await server.send_difficulty(
             initial_difficulty, session=handshake.connection_id
@@ -609,7 +645,7 @@ class StratumV1RegressionTest(MinerTestCase):
                 f"invalid {name} notification changed workReceived",
             )
 
-            recovery = MiningJob.standard(f"valid-notify-{index}")
+            recovery = MiningJob.standard(f"notify-ok-{index}")
             submission = await self._mine_one_share(
                 server,
                 recovery,
@@ -673,7 +709,7 @@ class StratumV1RegressionTest(MinerTestCase):
                     f"invalid {name} changed pool difficulty",
                 )
 
-            recovery = MiningJob.standard(f"valid-state-{offset}")
+            recovery = MiningJob.standard(f"state-ok-{offset}")
             submission = await self._mine_one_share(
                 server,
                 recovery,
@@ -686,6 +722,288 @@ class StratumV1RegressionTest(MinerTestCase):
             )
             await self._park_work(server, connection_id, 100 + offset)
             self.logger.info("State survived %s", name)
+
+    async def _case_92_version_rolling_requires_accepted_configure(
+        self,
+        server: FakeStratumV1Server,
+        handshake: StratumHandshake,
+        settings: Mapping[str, Any],
+    ) -> StratumHandshake:
+        difficulty = float(settings.get("share_difficulty", 256.0))
+        timeout = float(settings.get("share_timeout", 45.0))
+
+        deferred = await self._reconnect_with_configure_response(
+            server,
+            handshake,
+            settings,
+            configure_response=None,
+        )
+        server.submission_policy = None
+        await self._processing_barrier(server, deferred.connection_id, 92_000)
+        before_accept = await self._mine_one_share(
+            server,
+            MiningJob.standard("configure-deferred"),
+            difficulty=difficulty,
+            connection_id=deferred.connection_id,
+            timeout=timeout,
+        )
+        self.assertIsNone(
+            before_accept.version_bits,
+            "the miner submitted version bits before BIP310 was accepted",
+        )
+
+        self.assertIsNotNone(deferred.configure)
+        assert deferred.configure is not None
+        await server.send_configure_response(
+            deferred.configure.message_id,
+            accepted=True,
+            session=deferred.connection_id,
+        )
+        await self._processing_barrier(server, deferred.connection_id, 92_001)
+        after_accept = await self._mine_one_share(
+            server,
+            MiningJob.standard("configure-accepted").with_changes(version="20002000"),
+            difficulty=difficulty,
+            connection_id=deferred.connection_id,
+            timeout=timeout,
+        )
+        self.assertIsNotNone(
+            after_accept.version_bits,
+            "the miner did not submit negotiated BIP310 version bits",
+        )
+        assert after_accept.version_bits is not None
+        self.assertEqual(
+            int(after_accept.version_bits, 16) & ~int(server.version_mask, 16),
+            0,
+            "submitted version bits exceed the negotiated mask",
+        )
+
+        rejected = await self._reconnect_with_configure_response(
+            server,
+            deferred,
+            settings,
+            configure_response=False,
+        )
+        await self._processing_barrier(server, rejected.connection_id, 92_002)
+        after_reject = await self._mine_one_share(
+            server,
+            MiningJob.standard("configure-rejected"),
+            difficulty=difficulty,
+            connection_id=rejected.connection_id,
+            timeout=timeout,
+        )
+        self.assertIsNone(
+            after_reject.version_bits,
+            "the miner submitted version bits after BIP310 was rejected",
+        )
+        self.logger.info("BIP310 version rolling stayed gated by configure acceptance")
+        return rejected
+
+    async def _case_93_zero_length_extranonce2_produces_work(
+        self,
+        server: FakeStratumV1Server,
+        handshake: StratumHandshake,
+        settings: Mapping[str, Any],
+    ) -> None:
+        difficulty = float(settings.get("share_difficulty", 256.0))
+        timeout = float(settings.get("share_timeout", 45.0))
+        accept_timeout = float(settings.get("accept_timeout", 20.0))
+        connection_id = handshake.connection_id
+
+        # With both extranonce2 and version rolling disabled, a random job's
+        # finite nonce/ntime space may contain no difficulty-256 solution.
+        # Find one first, then preserve its exact coinbase and block version
+        # while moving the solved extranonce2 bytes into the fixed suffix.
+        seed = MiningJob.standard("zero-extranonce-seed")
+        solution = await self._mine_one_share(
+            server, seed, difficulty=difficulty,
+            connection_id=connection_id, timeout=timeout,
+        )
+        self.assertIsNone(solution.version_bits)
+        job = seed.with_fixed_extranonce2(solution.extranonce2).with_changes(
+            job_id="zero-length-extranonce2", ntime=solution.ntime,
+        )
+        await server.send_notification(
+            "mining.set_extranonce",
+            [server.extranonce1, 0],
+            session=connection_id,
+        )
+        await self._processing_barrier(server, connection_id, 93_001)
+        accepted_before = self.device.state.latest.shares_accepted
+        generation = self.device.state.generation
+        server.submission_policy = lambda submission: submission.job_id == job.job_id
+        try:
+            submission = await self._mine_one_share(
+                server,
+                job,
+                difficulty=difficulty,
+                connection_id=connection_id,
+                timeout=timeout,
+            )
+            self.assertEqual(submission.extranonce2, "")
+            await self.device.state.wait_for(
+                lambda state: state.online
+                and state.shares_accepted > accepted_before,
+                timeout=accept_timeout,
+                description="an accepted zero-length-extranonce2 share",
+                after_generation=generation,
+            )
+        finally:
+            await server.send_notification(
+                "mining.set_extranonce",
+                [server.extranonce1, server.extranonce2_size],
+                session=connection_id,
+            )
+            await self._processing_barrier(server, connection_id, 93_002)
+            server.submission_policy = None
+        self.logger.info("Zero-length extranonce2 produced accepted work")
+
+    async def _case_94_healthy_client_reconnects_reset_retry_history(
+        self,
+        server: FakeStratumV1Server,
+        handshake: StratumHandshake,
+        settings: Mapping[str, Any],
+    ) -> StratumHandshake:
+        difficulty = float(settings.get("share_difficulty", 256.0))
+        timeout = float(settings.get("share_timeout", 45.0))
+        cycles = int(settings.get("healthy_reconnect_cycles", 3))
+        self.assertGreaterEqual(cycles, 3)
+        self.assertLessEqual(cycles, 10)
+        server.configure_response = True
+        server.submission_policy = None
+
+        current = handshake
+        for cycle in range(1, cycles + 1):
+            current = await self._reconnect_with_configure_response(
+                server,
+                current,
+                settings,
+                configure_response=True,
+            )
+            await self._processing_barrier(
+                server, current.connection_id, 94_000 + cycle
+            )
+            job = MiningJob.standard(f"healthy-reconnect-{cycle}")
+            submission = await self._mine_one_share(
+                server,
+                job,
+                difficulty=difficulty,
+                connection_id=current.connection_id,
+                timeout=timeout,
+            )
+            self.assertEqual(submission.job_id, job.job_id)
+            self.logger.info("Healthy reconnect cycle %d/%d mined", cycle, cycles)
+        return current
+
+    async def _case_95_oversized_jobs_are_rejected_without_state_change(
+        self,
+        server: FakeStratumV1Server,
+        handshake: StratumHandshake,
+        settings: Mapping[str, Any],
+    ) -> None:
+        difficulty = float(settings.get("share_difficulty", 256.0))
+        timeout = float(settings.get("share_timeout", 45.0))
+        no_submit_window = float(settings.get("invalid_submit_window", 0.1))
+        connection_id = handshake.connection_id
+        template = MiningJob.standard("oversized-template")
+        server.submission_policy = None
+        # Malformed notifications intentionally bypass MiningJob's valid-ID
+        # constructor bound, as the parser tests above bypass other fields.
+        cases = (
+            {0: "j" * 512},
+            {0: "oversized-coinbase-prefix", 2: "00" * 4096},
+            {0: "malformed-large-suffix", 3: "00" * 4096},
+        )
+
+        for index, changes in enumerate(cases, start=1):
+            invalid = template.notification()
+            for field, value in changes.items():
+                invalid["params"][field] = value
+            before = await self.device.current_info()
+            self.assertIn("workReceived", before)
+            work_before = int(before.get("workReceived") or 0)
+            after = self._latest_sequence(server)
+            await server.send_json(invalid, session=connection_id, label="invalid-notify")
+            await self._processing_barrier(
+                server, connection_id, 95_000 + index
+            )
+            await server.assert_no_submission(
+                job_id=invalid["params"][0],
+                after_sequence=after,
+                duration=no_submit_window,
+            )
+            work_after = int(
+                (await self.device.current_info()).get("workReceived") or 0
+            )
+            self.assertEqual(
+                work_after,
+                work_before,
+                "an oversized or malformed job was accepted or silently truncated",
+            )
+
+            recovery = MiningJob.standard(f"valid-after-oversized-{index}")
+            await self._mine_one_share(
+                server,
+                recovery,
+                difficulty=difficulty,
+                connection_id=connection_id,
+                timeout=timeout,
+            )
+        # 4096 bytes are below the firmware suffix capacity. Prove that size
+        # alone does not reject a structurally valid multi-payout-capable job.
+        prefix = bytes.fromhex(template.coinbase_1)
+        script_tail = 42 + prefix[41] - len(prefix) - len(server.extranonce1) // 2 - server.extranonce2_size
+        suffix = (bytes.fromhex(template.coinbase_2)[:script_tail + 4]
+                  + b"\x01" + bytes(8) + b"\xfd\x00\x10"
+                  + b"\x6a" + bytes(4095) + bytes(4))
+        await self._mine_one_share(
+            server, template.with_changes(job_id="large-valid-suffix", coinbase_2=suffix.hex()),
+            difficulty=difficulty, connection_id=connection_id, timeout=timeout,
+        )
+        self.logger.info("Oversized/malformed jobs were rejected and a valid large suffix mined")
+
+    async def _case_96_burst_keeps_latest_clean_job_valid(
+        self,
+        server: FakeStratumV1Server,
+        handshake: StratumHandshake,
+        settings: Mapping[str, Any],
+    ) -> None:
+        difficulty = float(settings.get("share_difficulty", 256.0))
+        timeout = float(settings.get("share_timeout", 45.0))
+        burst_jobs = int(settings.get("job_burst_count", 24))
+        self.assertGreaterEqual(burst_jobs, 12)
+        self.assertLessEqual(burst_jobs, 64)
+        connection_id = handshake.connection_id
+        base_ntime = int(time.time()) & 0xFFFFFFFF
+        jobs = [
+            MiningJob.standard(
+                f"burst-{index:02d}", clean_jobs=index == burst_jobs - 1
+            ).with_changes(ntime=f"{(base_ntime + index) & 0xFFFFFFFF:08x}")
+            for index in range(burst_jobs)
+        ]
+        final = jobs[-1]
+        server.submission_policy = lambda submission: submission.job_id == final.job_id
+        after = self._latest_sequence(server)
+        await server.send_batch(
+            [
+                {
+                    "id": None,
+                    "method": "mining.set_difficulty",
+                    "params": [difficulty],
+                },
+                *(job.notification() for job in jobs),
+            ],
+            session=connection_id,
+            label=f"job-burst:{burst_jobs}",
+        )
+        submission = await server.wait_for_submission(
+            job_id=final.job_id,
+            connection_id=connection_id,
+            after_sequence=after,
+            timeout=timeout,
+        )
+        self._assert_submission_ntime(submission.ntime, final.ntime)
+        self.logger.info("Latest clean job survived a %d-job burst", burst_jobs)
 
     @validation_test(1849)
     def test_90_fragmented_consecutive_and_boundary_messages(self) -> None:
@@ -704,6 +1022,62 @@ class StratumV1RegressionTest(MinerTestCase):
     def test_91_invalid_messages_do_not_create_work_or_corrupt_state(self) -> None:
         self._run_ordered_case(
             self._case_91_invalid_messages_do_not_create_work_or_corrupt_state(
+                type(self)._server,
+                type(self)._handshake,
+                type(self)._settings,
+            )
+        )
+
+    @validation_test(1897)
+    def test_92_version_rolling_requires_accepted_configure(self) -> None:
+        async def run() -> None:
+            type(self)._handshake = (
+                await self._case_92_version_rolling_requires_accepted_configure(
+                    type(self)._server,
+                    type(self)._handshake,
+                    type(self)._settings,
+                )
+            )
+
+        self._run_ordered_case(run())
+
+    @validation_test(1897)
+    def test_93_zero_length_extranonce2_produces_work(self) -> None:
+        self._run_ordered_case(
+            self._case_93_zero_length_extranonce2_produces_work(
+                type(self)._server,
+                type(self)._handshake,
+                type(self)._settings,
+            )
+        )
+
+    @validation_test(1897)
+    def test_94_healthy_client_reconnects_reset_retry_history(self) -> None:
+        async def run() -> None:
+            type(self)._handshake = (
+                await self._case_94_healthy_client_reconnects_reset_retry_history(
+                    type(self)._server,
+                    type(self)._handshake,
+                    type(self)._settings,
+                )
+            )
+
+        self._run_ordered_case(run())
+
+    @validation_test(1897)
+    def test_95_oversized_jobs_are_rejected_without_state_change(self) -> None:
+        self._run_ordered_case(
+            self._case_95_oversized_jobs_are_rejected_without_state_change(
+                type(self)._server,
+                type(self)._handshake,
+                type(self)._settings,
+            )
+        )
+
+    @validation_test(1897)
+    def test_96_burst_keeps_latest_clean_job_valid(self) -> None:
+        self._run_ordered_case(
+            self._case_96_burst_keeps_latest_clean_job_valid(
                 type(self)._server,
                 type(self)._handshake,
                 type(self)._settings,

@@ -5,7 +5,7 @@ Stratum V1 server, including valid work, rejected work, and bounded failures.
 
 - **Lifecycle:** supported
 - **Owner:** hardware-test maintainers
-- **Last reconciled:** 2026-09-04
+- **Last reconciled:** 2026-09-13
 - **Spec ID:** TR-STRATUM
 
 [Intent](intent.md) · [Acceptance](acceptance.md) · [Design](design.md) ·
@@ -13,6 +13,22 @@ Stratum V1 server, including valid work, rejected work, and bounded failures.
 
 ## Changelog
 
+- 2026-09-13: Make standard coinbase fixtures reflect negotiated extranonce
+  sizes, keep parking difficulty within the firmware's accepted range, and
+  distinguish a malformed large suffix from valid large-payout work.
+- 2026-09-13: Seed the zero-length extranonce2 case from a solved job so finite
+  search space cannot cause a random no-solution timeout.
+
+- 2026-09-13: Select a responsive current Stratum session after pool setup;
+  a connection from before the adapter's reboot cannot supply handshake
+  evidence or receive the first test job.
+
+- 2026-09-13: Bounded, opt-in timestamp rolling supports BZM shares without
+  weakening the default exact-timestamp check.
+
+- 2026-08-30: Added opt-in PR 1897 scenarios for BIP310 acceptance gating,
+  zero-length extranonce2 work, healthy reconnect retry reset, oversized job
+  rejection, and burst-job ownership.
 - 2026-09-04: Bound ESP-Miner job IDs, selected the newest post-restart
   connection, and completed Gamma 602 HIL for PR 1897; a broader run separately
   found that PR 1849's opt-in embedded-NUL reconnect case times out on the

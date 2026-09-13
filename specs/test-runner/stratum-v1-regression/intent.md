@@ -8,8 +8,8 @@ or exact share responses, so they cannot isolate miner-client regressions.
 ## Why it matters
 
 A miner may appear reachable while mishandling job changes, extranonces,
-difficulty, submit responses, or reconnect behavior. Controlled protocol
-stimuli make those failures repeatable and diagnosable.
+difficulty, extension negotiation, submit responses, or reconnect behavior.
+Controlled protocol stimuli make those failures repeatable and diagnosable.
 
 ## Stakeholders
 
@@ -20,7 +20,9 @@ stimuli make those failures repeatable and diagnosable.
 ## Desired outcome
 
 The target miner connects to a local fake pool and passes an ordered,
-bounded set of protocol scenarios with a sanitized transcript.
+bounded set of protocol scenarios with a sanitized transcript. Opt-in
+pull-request validation can exercise high-risk protocol transitions without
+widening the normal qualification suite.
 
 ## Primary flow
 

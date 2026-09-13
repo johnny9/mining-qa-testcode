@@ -71,6 +71,27 @@ class ModuleCatalogTest(unittest.TestCase):
             with self.subTest(values=values), self.assertRaises(ConfigError):
                 select(values)
 
+    def test_stratum_regression_options_keep_strict_defaults_and_bounds(self):
+        catalog = load_module_catalog()
+        module = catalog.module("stratum_v1_regression")
+        options = {option.id: option for option in module.options}
+        self.assertEqual(options["max_ntime_roll_seconds"].default, 0)
+
+        def select(values):
+            return selected_module_options({"MINER_TEST_MODULE_OPTIONS": json.dumps({
+                "schema_version": 1, "module_id": module.id, "values": values,
+            })}, catalog)
+
+        values = {"max_ntime_roll_seconds": 60, "healthy_reconnect_cycles": 3,
+                  "job_burst_count": 24}
+        self.assertEqual(dict(select(values)[1]), values)
+        for invalid in ({"max_ntime_roll_seconds": -1}, {"max_ntime_roll_seconds": 121},
+                        {"max_ntime_roll_seconds": True}, {"max_ntime_roll_seconds": 1.5},
+                        {"healthy_reconnect_cycles": 2}, {"healthy_reconnect_cycles": 11},
+                        {"job_burst_count": 11}, {"job_burst_count": 65}):
+            with self.subTest(values=invalid), self.assertRaises(ConfigError):
+                select(invalid)
+
     def test_selection_accepts_only_declared_typed_bounded_values(self) -> None:
         catalog = load_module_catalog()
         selected = selected_module_options(

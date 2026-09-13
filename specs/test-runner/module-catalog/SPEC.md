@@ -5,7 +5,7 @@ build gates without importing runner code or retyping patterns and options.
 
 - **Lifecycle:** supported
 - **Owner:** test-runner maintainers
-- **Last reconciled:** 2026-09-11
+- **Last reconciled:** 2026-09-13
 - **Spec ID:** TR-CATALOG
 
 [Intent](intent.md) · [Acceptance](acceptance.md) · [Design](design.md) ·
@@ -13,6 +13,8 @@ build gates without importing runner code or retyping patterns and options.
 
 ## Changelog
 
+- 2026-09-13: Registered bounded SV1 timestamp rolling, healthy reconnect
+  cycles, and job burst options; strict timestamp checking remains the default.
 - 2026-09-11: Registered authenticated SV2 pool fallback with the existing
   bounded fallback options and a distinct `stratum-v2` capability requirement.
 - 2026-09-11: Exposed bounded fallback stability, cycle count, and outage

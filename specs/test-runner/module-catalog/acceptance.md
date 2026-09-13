@@ -28,6 +28,10 @@
 
 ## Verification evidence
 
+- 2026-09-13: SV1 timestamp rolling, reconnect cycles, and burst size retain
+  strict defaults and bounded portable selections. Tests reject booleans,
+  fractional values, and values outside the declared ranges. All 169 unit
+  tests and wheel/sdist builds passed; both packages contain the new options.
 - 2026-09-11: The SV2 fallback module declares `http` and `stratum-v2`, reuses
   the bounded fallback options, and discovers both channel modes. All 145
   unit tests and wheel/sdist builds passed with the expanded catalog.
