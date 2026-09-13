@@ -5,13 +5,18 @@ temporary local pools, with optional rendered dashboard and pool-form checks.
 
 - **Lifecycle:** supported
 - **Owner:** hardware-test maintainers
-- **Last reconciled:** 2026-09-11
+- **Last reconciled:** 2026-09-13
 - **Spec ID:** TR-FALLBACK
 
 [Intent](intent.md) · [Acceptance](acceptance.md) · [Design](design.md) ·
 [Risks](risks.md)
 
 ## Changelog
+
+- 2026-09-13: Avoid a recovery restart while Bonanza reports increasing locally
+  valid results and its 30-second hashrate window warms up. Final cleanup still
+  requires nonzero hashrate, a fresh accepted share, and original settings;
+  ASIC health faults prohibit recovery writes.
 
 - 2026-09-11: Qualified all 18 SV2 cases and 74 mining phases on Gamma-02
   with master `1df7ba1`. Both channel modes failed over from complete silence

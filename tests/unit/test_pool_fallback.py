@@ -172,6 +172,75 @@ class TemporaryPoolTest(unittest.IsolatedAsyncioTestCase):
 
 
 class MiningEvidenceTest(unittest.IsolatedAsyncioTestCase):
+    async def test_valid_results_allow_hashrate_window_to_warm_up_without_restart(self):
+        api = FakeApi()
+        api.info.update(hashRate=0, workReceived=3, sharesAccepted=0)
+        pools = TemporaryPools(api, api.read, api.info, read_only=False)
+        calls = 0
+
+        async def read():
+            nonlocal calls
+            calls += 1
+            api.info["asicHealth"] = {"lifecycle": "MINING", "locallyValidResults": calls}
+            if calls >= 15:
+                api.info.update(hashRate=100, sharesAccepted=1)
+            return await api.read()
+
+        pools.read_info = read
+        callback = AsyncMock()
+        restarted = await verify_restored_mining(
+            pools, callback, timeout=.2, restart_after=.005, poll_interval=.001)
+        self.assertFalse(restarted)
+        callback.assert_not_awaited()
+
+    async def test_valid_results_alone_cannot_pass_cleanup(self):
+        api = FakeApi()
+        api.info.update(hashRate=0, workReceived=3, sharesAccepted=0)
+        pools = TemporaryPools(api, api.read, api.info, read_only=False)
+        calls = 0
+
+        async def read():
+            nonlocal calls
+            calls += 1
+            api.info["asicHealth"] = {"lifecycle": "MINING", "locallyValidResults": calls}
+            return await api.read()
+
+        pools.read_info = read
+        callback = AsyncMock()
+        with self.assertRaises(TimeoutError):
+            await verify_restored_mining(
+                pools, callback, timeout=.03, restart_after=.005, poll_interval=.001)
+        callback.assert_not_awaited()
+
+    async def test_unchanged_valid_counter_does_not_prevent_stall_recovery(self):
+        api = FakeApi()
+        api.info.update(hashRate=0, workReceived=3, sharesAccepted=0,
+                        asicHealth={"lifecycle": "MINING", "locallyValidResults": 100})
+        pools = TemporaryPools(api, api.read, api.info, read_only=False)
+        async def read():
+            if api.info["hashRate"]:
+                api.info["sharesAccepted"] += 1
+            return await api.read()
+        pools.read_info = read
+        async def restart():
+            api.info.update(hashRate=100, sharesAccepted=1)
+        callback = AsyncMock(side_effect=restart)
+        self.assertTrue(await verify_restored_mining(
+            pools, callback, timeout=.1, restart_after=.005, poll_interval=.001))
+        callback.assert_awaited_once()
+
+    async def test_asic_health_fault_blocks_recovery_restart(self):
+        for health in ({"lastFaultCode": 4103}, {"lifecycle": "FAULT"}):
+            with self.subTest(health=health):
+                api = FakeApi()
+                api.info.update(hashRate=0, workReceived=3, sharesAccepted=0, asicHealth=health)
+                pools = TemporaryPools(api, api.read, api.info, read_only=False)
+                callback = AsyncMock()
+                with self.assertRaises(DeviceError):
+                    await verify_restored_mining(
+                        pools, callback, timeout=.03, restart_after=0, poll_interval=.001)
+                callback.assert_not_awaited()
+
     async def test_restored_mining_requires_progress_and_recovers_stalled_power_once(self):
         for stalled in (False, True):
             with self.subTest(stalled=stalled):

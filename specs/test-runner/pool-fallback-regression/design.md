@@ -146,8 +146,13 @@ regression. Later phase deadline failures are assertions with phase evidence.
 
 The target must initially be hashing. After restoring settings, cleanup requires
 fresh accepted shares within 90 seconds. A work-receiving device still at zero
-hashrate after 30 seconds may receive one adapter-verified restart; original
-settings are reread throughout. Safety faults forbid that restart. Recovery
+hashrate after 30 seconds without fresh locally validated results may receive
+one adapter-verified restart. Increasing `asicHealth.locallyValidResults` in
+the `MINING` lifecycle defers that restart while Bonanza's hashrate window
+warms up; an unchanged historical count is insufficient. This progress does
+not replace the final nonzero hashrate and accepted-share requirements or
+extend the overall deadline. Original settings are reread throughout. Safety
+faults, including `asicHealth.lastFaultCode` or `FAULT`, forbid that restart. Recovery
 is recorded separately, and needing a restart leaves an error even if the
 device returns healthy. The entire restoration remains inside the runner's
 configured cleanup timeout.

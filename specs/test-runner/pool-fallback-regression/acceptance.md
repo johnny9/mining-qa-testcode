@@ -55,7 +55,50 @@
   restoration; a work-receiving zero-hashrate device may receive one recovery
   restart, which remains an error in the result. Safety faults block that restart.
 
+- [x] **TR-FALLBACK-AC-18:** Increasing locally validated results defer a
+  zero-hashrate recovery restart during `MINING`; an unchanged count does not.
+  Progress alone cannot pass cleanup without nonzero hashrate and a fresh
+  accepted share. ASIC health faults prevent the restart.
+
 ## Verification evidence
+
+- 2026-09-13: Integrated the Bonanza changes onto current Testcode `main`
+  (`629216f`), preserving the newer SV2, restart-detection, privacy, catalog,
+  and expanded fallback behavior. All 169 unit tests and wheel/sdist builds
+  passed. The hardware runs below used the earlier runner checkout; the
+  combined runner has local validation and has not been rerun on hardware.
+
+- 2026-09-13: After Stratum admission and negotiation fixes, Bonanza 1002 /
+  BZM `bzm-cj3-c1758f7` passed both network-only cases and all ten phases in
+  run `20260913T045349.393527Z` (230.530 seconds), with no failures, errors,
+  or skips. All 18 submissions passed an independent SHA-256 audit. Final
+  independent HTTP verification matched the original settings digest and
+  pool rows and observed a new accepted share at 1449.86 GH/s and 1200 MHz,
+  with no ASIC fault. Rollback `ota_0` remained preserved. This run makes no
+  Gamma or browser claim.
+
+- 2026-09-13: Bonanza 1002 / BZM firmware `bzm-cj2-c1758f7` passed both
+  API-only hardware cases in run `20260913T033138.656768Z` (322.479 seconds),
+  with all ten phases and both cleanups passing without a recovery restart.
+  Original pool rows, operating settings, and fresh accepted shares were
+  verified. All 17 captured submissions also passed an independent SHA-256
+  audit. The final 107-test unit suite, spec integrity, wheel/sdist builds, and
+  whitespace checks passed. No current Gamma/browser result is claimed.
+
+- 2026-09-13: Additional network-only Bonanza clean-job stress run
+  `stress-20260913T035301Z` passed startup through 1200 MHz, a 24-job clean
+  burst, and a 120-second soak with 142 jobs and 27 independently verified
+  shares. All 114 health samples had no hardware fault. Cleanup restored the
+  original settings and fresh accepted shares without a recovery restart.
+  A subsequent independent HTTP check matched the original settings digest,
+  found only the original pool rows, and observed another accepted share at
+  1400.99 GH/s. The known-good `ota_0` firmware remained preserved.
+
+- 2026-09-13: A fake Bonanza warmup reproduced the premature restart before
+  the fix. New tests cover live progress, an unchanged counter, missing final
+  shares/hashrate, and ASIC health faults. The existing Gamma/browser and expanded fallback qualifications below
+  have not been rerun for this change. This Bonanza run covered the two
+  original API cases, not the newer nine-case module or SV2 scenarios.
 
 - 2026-09-11: Gamma-02 / BM1370 HIL run `20260911T215406.340854Z` used clean
   testcode `df990b1e1a468b3d0c328c0f52ceafa87a3784a9` and current master

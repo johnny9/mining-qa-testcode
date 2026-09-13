@@ -287,6 +287,8 @@ async def verify_restored_mining(
     started = time.monotonic()
     restarted = False
     accepted_baseline: int | None = None
+    valid_baseline: int | None = None
+    last_valid_progress = started
     async with asyncio.timeout(timeout):
         while True:
             info = await pools.read_info()
@@ -294,8 +296,17 @@ async def verify_restored_mining(
                 info.get(k) != v for k, v in pools.baseline.items()
             ):
                 raise DeviceError("settings changed during post-cleanup mining verification")
-            if info.get("hardware_fault") or info.get("power_fault") or info.get("overheat_mode"):
+            health = info.get("asicHealth") or {}
+            if (info.get("hardware_fault") or info.get("power_fault") or info.get("overheat_mode") or
+                    health.get("lastFaultCode") or health.get("lifecycle") == "FAULT"):
                 raise DeviceError("device reports a safety fault after pool restoration")
+            valid = health.get("locallyValidResults")
+            if health.get("lifecycle") == "MINING" and type(valid) is int and valid >= 0:
+                if valid_baseline is not None and valid > valid_baseline:
+                    last_valid_progress = time.monotonic()
+                valid_baseline = valid
+            else:
+                valid_baseline = None
             shares = int(info.get("sharesAccepted", 0))
             if accepted_baseline is None or shares < accepted_baseline:
                 accepted_baseline = shares
@@ -304,7 +315,11 @@ async def verify_restored_mining(
             if hashrate > 0 and work > 0 and shares > accepted_baseline:
                 return restarted
             if (not restarted and hashrate == 0 and work > 0 and
-                    time.monotonic() - started >= restart_after):
+                    time.monotonic() - last_valid_progress >= restart_after):
+                # Bonanza needs a full 30-second hashrate window after a pool
+                # switch. Fresh validated results prove it is mining while
+                # that display warms up; they do not replace the final share
+                # acceptance and nonzero-hashrate requirements above.
                 restarted = True
                 await restart()
                 accepted_baseline = None

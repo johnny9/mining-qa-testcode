@@ -47,6 +47,10 @@ Some installed firmware may retain a pool-unavailable power shutdown after
 restoring reachable pools. Configuration equality does not prove healthy
 cleanup. Require new accepted shares, retain recovery evidence, and keep any
 needed recovery restart visible as an error.
+Bonanza's displayed hashrate needs a complete 30-second window after reset;
+zero during that interval does not imply powered-down hardware. Increasing
+locally validated result counters defer stall recovery, while the overall
+cleanup deadline and final accepted-share requirement remain unchanged.
 
 A TCP connection can remain open while the pool stops sending jobs and share
 acknowledgements. Gamma firmware `ede6c13` did not fail over from that condition
