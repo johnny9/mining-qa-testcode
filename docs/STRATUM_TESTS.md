@@ -7,7 +7,10 @@ Stratum V1/V2 regression suites:
 - the local regression suite checks the miner's Stratum client with a fake pool
   on the test host.
 
-All suites collect device state, telemetry, logs, and share evidence.
+All suites collect device state, telemetry, logs, and share evidence. USB is
+optional: omit `devices.interfaces.serial` or set its `enabled = false` for a
+network-only run. HTTP controls the miner, WebSocket/HTTP supplies telemetry,
+and the miner connects directly to the test host's Stratum TCP listeners.
 
 ## Public-pool smoke test
 
@@ -29,7 +32,7 @@ export MINER_TEST_POOL_USER='your-test-identity'
 
 The test opens its own Stratum connection to check the pool handshake. At the
 same time, it watches the mining device over its configured interfaces and
-captures the ESP serial log.
+captures the ESP serial log when serial is enabled.
 
 With `configure_device = true`, the configured host and port are applied to the
 miner. If no replacement username is supplied, the miner keeps its current

@@ -24,6 +24,12 @@
   message, max samples.
 - Serial: path/glob, baud rate, capture/required, optional flash command.
 
+Serial can be omitted or set to `enabled=false` for network-only runs. The
+adapter then skips serial construction, path validation, capture, and USB flash
+capabilities regardless of other serial settings. With `enabled` omitted,
+existing configured serial behavior is preserved; a supplied value must be a
+boolean. OTA, API, and WebSocket operation remain independently available.
+
 ### Environment
 
 - None directly. Protocol credentials are supplied by higher feature slices

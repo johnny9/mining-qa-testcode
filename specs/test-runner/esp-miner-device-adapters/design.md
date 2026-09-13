@@ -23,6 +23,12 @@
 - Gamma OTA uses application and optional web artifacts; it has no bridge
   artifact.
 
+Serial can be omitted or set to `enabled=false` for network-only runs. The
+adapter then skips serial construction, path validation, capture, and USB flash
+capabilities regardless of other serial settings. With `enabled` omitted,
+existing configured serial behavior is preserved; a supplied value must be a
+boolean. OTA, API, and WebSocket operation remain independently available.
+
 ### Environment
 
 - Only configured write-only password variables are adapter inputs.

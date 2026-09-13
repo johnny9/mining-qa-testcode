@@ -64,6 +64,19 @@ enabled = false
 method = "ota"
 ```
 
+For network-only testing, omit the serial table or explicitly disable it:
+
+```toml
+[devices.interfaces.serial]
+enabled = false
+```
+
+Disabled serial does not open a USB device, capture serial logs, or offer USB
+flashing, even if the table retains `required = true` or a flash command. HTTP,
+WebSocket, OTA updates, and the local Stratum regression suites remain available.
+A serial table without `enabled` keeps its existing behavior. Network-only runs
+cannot capture early boot output or use USB recovery when the API is offline.
+
 Use a stable `/dev/serial/by-id/` path when serial access is enabled. The
 WebSocket URL is derived from the API address when it is not set.
 

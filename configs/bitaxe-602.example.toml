@@ -36,6 +36,8 @@ enabled = true
 required = false
 
 [devices.interfaces.serial]
+# Set false (or omit this table) for network-only testing and OTA.
+enabled = true
 port = "/dev/serial/by-id/usb-Espressif_USB_JTAG_serial_debug_unit_*-if00"
 baudrate = 115200
 capture = true

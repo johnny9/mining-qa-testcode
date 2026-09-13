@@ -5,7 +5,7 @@ lifecycle, pool, firmware, state, and telemetry contracts.
 
 - **Lifecycle:** supported
 - **Owner:** ESP-Miner adapter maintainers
-- **Last reconciled:** 2026-09-04
+- **Last reconciled:** 2026-09-13
 - **Spec ID:** TR-BITAXE
 
 [Intent](intent.md) · [Acceptance](acceptance.md) · [Design](design.md) ·
@@ -13,6 +13,8 @@ lifecycle, pool, firmware, state, and telemetry contracts.
 
 ## Changelog
 
+- 2026-09-13: Added explicit network-only operation with `serial.enabled=false`;
+  disabled serial has no capture or USB-flashing capabilities.
 - 2026-09-04: Verified Gamma 602 SV1/SV2 pool mutation and cleanup in HIL,
   hardened restart detection, and supported SV2 fields present only in the
   primary pool object.

@@ -86,6 +86,8 @@ max_message_bytes = 2097152
 max_samples = 50000
 
 [devices.interfaces.serial]
+# Set false (or omit this table) for network-only testing and OTA.
+enabled = true
 # Prefer /dev/serial/by-id over /dev/ttyACM0 so reconnects do not change identity.
 port = "/dev/serial/by-id/usb-Espressif_USB_JTAG_serial_debug_unit_*-if00"
 baudrate = 115200

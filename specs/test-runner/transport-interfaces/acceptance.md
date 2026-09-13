@@ -25,7 +25,15 @@
 - [ ] **TR-IO-AC-08:** Current target validation confirms the configured stable
   serial path, permissions, capture, and recovery through a real reboot.
 
+- [x] **TR-IO-AC-09:** Omitted or explicitly disabled serial permits a
+  network-only lifecycle without serial construction or USB capabilities;
+  legacy serial tables remain enabled and USB upgrades fail while disabled.
+
 ## Verification evidence
+
+- `tests.unit.test_network_only` — disabled/omitted serial lifecycle, capability
+  exclusion, USB upgrade rejection, legacy compatibility, and invalid option;
+  reconciled 2026-09-13.
 
 - `tests.unit.test_api` — read-only transport boundary; reconciled 2026-08-10.
 - `tests.unit.test_stratum` — real loopback Stratum handshake/job behavior;

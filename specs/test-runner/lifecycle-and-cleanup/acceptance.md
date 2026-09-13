@@ -29,6 +29,24 @@
 
 ## Verification evidence
 
+- 2026-09-13: Integrated the Bonanza changes onto current Testcode `main`
+  (`629216f`), preserving the newer SV2, restart-detection, privacy, catalog,
+  and expanded fallback behavior. All 169 unit tests and wheel/sdist builds
+  passed. The hardware runs below used the earlier runner checkout; the
+  combined runner has local validation and has not been rerun on hardware.
+
+- 2026-09-13: `tests.unit.test_bonanza_lifecycle.RestartReadinessTest` proves
+  that staged startup is awaited without an early resume, and safety faults
+  fail before a resume write both after reboot and when settings already match.
+  Negative cases cover a numeric fault, `FAULT` without a numeric code,
+  overheating, and an in-progress startup.
+- 2026-09-13: Network-only Bonanza PR #5 run `20260913T012006.781242Z`
+  restored original pools and verified fresh accepted shares after a test
+  error. Subsequent fallback run `20260913T012347.936698Z` restored pool and
+  operating settings but left mining faulted (4103); rollback to preserved
+  `v0.1.0`/`ota_0` recovered mining with fresh accepted shares. This is partial
+  Bonanza evidence; all-family AC-08 remains unchecked.
+
 - `tests.unit.test_bonanza_lifecycle` — flat/multi-pool SV2 restoration, pool
   validation, write-only password, redaction-marker negative paths, delayed
   reboot detection, and primary-pool alias fallback; reconciled 2026-09-04.

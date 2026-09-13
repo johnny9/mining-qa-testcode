@@ -27,6 +27,10 @@
 
 ## Verification evidence
 
+- 2026-09-13: `tests.unit.test_bonanza_lifecycle.RestartReadinessTest` proves
+  that staged startup is awaited without an early resume, and post-reboot
+  safety faults fail before a resume write.
+
 - Source/config reconciliation and full unit suite cover method guards and
   transport write rules; reconciled 2026-08-10.
 - No firmware HIL was run for this documentation iteration.

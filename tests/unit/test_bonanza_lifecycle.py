@@ -450,3 +450,108 @@ class BonanzaLifecycleTest(unittest.IsolatedAsyncioTestCase):
             baseline_artifact = (artifacts.path / "baseline.json").read_text()
             self.assertNotIn("original-secret", baseline_artifact)
             self.assertNotIn("old.worker", baseline_artifact)
+
+
+class RestartReadinessTest(unittest.IsolatedAsyncioTestCase):
+    make_device = BonanzaLifecycleTest.make_device
+
+    async def test_restore_never_resumes_faulted_or_starting_device(self):
+        class NoWriteApi(FakeApi):
+            async def post_json(self, path, value=None):
+                raise AssertionError("Must not resume a faulted or starting device")
+
+        for lifecycle, fault, overheat in (
+            ("FAULT", 4103, False),
+            ("FAULT", 0, False),
+            ("MINING", 0, True),
+            ("STARTING", 0, False),
+        ):
+            with self.subTest(lifecycle=lifecycle, fault=fault, overheat=overheat):
+                with tempfile.TemporaryDirectory() as directory:
+                    device = self.make_device(
+                        directory,
+                        TestArtifacts.create(Path(directory) / "case"),
+                        name="unsafe-resume",
+                    )
+                    device.api = NoWriteApi()
+                    baseline = await device.snapshot_clean_state()
+                    device.api.info.update(
+                        miningPaused=True,
+                        overheat_mode=overheat,
+                        asicHealth={"lifecycle": lifecycle, "lastFaultCode": fault},
+                    )
+                    with self.assertRaisesRegex(DeviceError, "safety fault|still starting"):
+                        await device.restore_clean_state(baseline)
+                    self.assertEqual(device.api.patches, [])
+
+    async def test_restore_waits_for_staged_boot_without_resuming_it(self):
+        class StagedApi(FakeApi):
+            def __init__(self):
+                super().__init__()
+                self.remaining = 0
+                self.posts = []
+
+            async def post_json(self, path, value=None):
+                self.posts.append(path)
+                if path != "/api/system/restart":
+                    raise AssertionError("Must not resume an in-progress staged boot")
+                self.info["uptimeSeconds"] = 0
+                self.remaining = 2
+                return b"{}"
+
+            async def get_json(self, path):
+                if self.remaining:
+                    self.remaining -= 1
+                    self.info["miningPaused"] = True
+                    self.info["asicHealth"]["lifecycle"] = "STARTING"
+                else:
+                    self.info["miningPaused"] = False
+                    self.info["asicHealth"]["lifecycle"] = "MINING"
+                return await super().get_json(path)
+
+        with tempfile.TemporaryDirectory() as directory:
+            device = self.make_device(directory, TestArtifacts.create(Path(directory)/"case"), name="staged-restart")
+            device.api = StagedApi()
+            baseline = await device.snapshot_clean_state()
+            device.api.info["stratumURL"] = "temporary.pool"
+            await device.restore_clean_state(baseline)
+            self.assertEqual(device.api.posts, ["/api/system/restart"])
+            self.assertEqual(device.api.info["stratumURL"], "old.pool")
+            self.assertFalse(device.api.info["miningPaused"])
+
+    async def test_restart_safety_fault_fails_before_resume(self):
+        class FaultApi(FakeApi):
+            async def post_json(self, path, value=None):
+                if path != "/api/system/restart":
+                    raise AssertionError("Must not resume a faulted device")
+                self.info["asicHealth"]["lastFaultCode"] = 42
+                return await super().post_json(path, value)
+
+        with tempfile.TemporaryDirectory() as directory:
+            device = self.make_device(directory, TestArtifacts.create(Path(directory)/"case"), name="faulted-restart")
+            device.api = FaultApi()
+            await device.current_info()
+            with self.assertRaisesRegex(DeviceError, "safety fault"):
+                await device._restart_and_wait(expected={})
+
+    async def test_ota_waits_for_staged_boot_before_baseline(self):
+        class UpgradeApi(FakeApi):
+            def __init__(self):
+                super().__init__()
+                self.info["uptimeSeconds"] = 0
+                self.remaining = 2
+
+            async def get_json(self, path):
+                starting = self.remaining > 0
+                self.remaining -= 1
+                self.info["asicHealth"]["lifecycle"] = "STARTING" if starting else "MINING"
+                self.info["miningPaused"] = starting
+                return await super().get_json(path)
+
+        with tempfile.TemporaryDirectory() as directory:
+            device = self.make_device(directory, TestArtifacts.create(Path(directory)/"case"), name="staged-ota")
+            device.api = UpgradeApi()
+            device.online_timeout = 4
+            info = await device._wait_after_upgrade(100)
+            self.assertEqual(info["asicHealth"]["lifecycle"], "MINING")
+            self.assertFalse(info["miningPaused"])

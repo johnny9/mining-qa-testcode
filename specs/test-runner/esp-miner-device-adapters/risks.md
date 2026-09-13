@@ -18,6 +18,10 @@
   versions for bounded feature detection.
 - `boardVersion` and `ASICModel` are authoritative identity fields.
 
+Network-only runs cannot collect early boot serial output or recover through
+USB. An API failure remains a test/setup error; firmware recovery must use a
+verified network-accessible partition or be reported as unavailable.
+
 ## Open questions
 
 - If future ESP-Miner models diverge substantially, composition may replace the

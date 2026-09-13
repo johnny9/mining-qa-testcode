@@ -87,6 +87,16 @@
 
 ## Failure and recovery
 
+The API can return while Bonanza reports `asicHealth.lifecycle=STARTING` and
+`miningPaused=true`. Reboot verification waits for that transient startup to
+finish within the existing deadline, before capturing/restoring pause state.
+A reported overheat or ASIC safety fault fails verification; it never triggers
+a cleanup resume, including when settings already match and no restart was
+needed. A `FAULT` lifecycle is sufficient even if the numeric fault is zero.
+Cleanup also refuses a resume if startup is still in progress without a
+runner-initiated reboot. Devices without the Bonanza lifecycle field retain their
+existing online/settings verification.
+
 - Invalid baseline → fail before test body mutation.
 - Restore timeout or mismatch → test error with mismatch evidence.
 - Multiple cleanup failures → `ExceptionGroup`, preserving every failure.

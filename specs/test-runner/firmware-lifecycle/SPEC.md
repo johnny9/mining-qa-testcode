@@ -5,13 +5,16 @@ the target firmware before testing.
 
 - **Lifecycle:** supported
 - **Owner:** device-adapter maintainers
-- **Last reconciled:** 2026-08-10
+- **Last reconciled:** 2026-09-13
 - **Spec ID:** TR-FW
 
 [Intent](intent.md) · [Acceptance](acceptance.md) · [Design](design.md) ·
 [Risks](risks.md)
 
 ## Changelog
+
+- 2026-09-13: Wait for staged Bonanza startup before treating a reboot as ready;
+  safety faults fail before any cleanup resume request.
 
 - 2026-08-10: Moved whole-gate artifact selection/deployment ownership to the
   external `mining-qa-lab` repository.

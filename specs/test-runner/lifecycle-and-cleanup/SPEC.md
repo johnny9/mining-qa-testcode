@@ -5,7 +5,7 @@ is allowed to change.
 
 - **Lifecycle:** supported
 - **Owner:** test-runner maintainers
-- **Last reconciled:** 2026-09-04
+- **Last reconciled:** 2026-09-13
 - **Spec ID:** TR-LIFECYCLE
 
 [Intent](intent.md) · [Acceptance](acceptance.md) · [Design](design.md) ·
@@ -13,6 +13,8 @@ is allowed to change.
 
 ## Changelog
 
+- 2026-09-13: Wait for staged Bonanza startup before treating a reboot as ready;
+  safety faults fail before any cleanup resume request.
 - 2026-09-04: Hardened restart readiness against transient API failures and
   pre-reboot zero uptime, and resolved missing flat settings aliases through
   the selected primary pool.

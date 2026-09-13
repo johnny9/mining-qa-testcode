@@ -168,8 +168,11 @@ class BitaxeDevice(MiningDevice):
         )
 
         serial_config = config.interface("serial")
+        serial_enabled = serial_config.get("enabled", True)
+        if not isinstance(serial_enabled, bool):
+            raise ConfigError("serial.enabled must be a boolean")
         self.serial: EspSerialInterface | None = None
-        if serial_config:
+        if serial_config and serial_enabled:
             self.serial = EspSerialInterface(
                 serial_config,
                 log_path=artifacts.serial_path,
@@ -646,6 +649,10 @@ class BitaxeDevice(MiningDevice):
         info = await self.current_info()
         paused = bool(info.get("miningPaused", False))
         if paused != baseline.mining_paused:
+            if not baseline.mining_paused and not self._boot_ready(info):
+                raise DeviceError(
+                    "device is still starting; refusing to resume during clean-state restore"
+                )
             endpoint = "/api/system/pause" if baseline.mining_paused else "/api/system/resume"
             await self.api.post_json(endpoint)
             await self.current_info()
@@ -758,6 +765,19 @@ class BitaxeDevice(MiningDevice):
         expected = {key: value for key, value in desired.items() if key != "stratumPassword"}
         await self._restart_and_wait(expected=expected)
 
+    @staticmethod
+    def _boot_ready(info: Mapping[str, Any]) -> bool:
+        health = info.get("asicHealth") or {}
+        if (
+            info.get("overheat_mode")
+            or health.get("lastFaultCode")
+            or health.get("lifecycle") == "FAULT"
+        ):
+            raise DeviceError("device reports a safety fault")
+        # Bonanza serves HTTP before its staged power/ASIC startup completes.
+        # Its temporary miningPaused flag must not trigger a second startup.
+        return health.get("lifecycle") != "STARTING"
+
     async def _restart_and_wait(self, *, expected: Mapping[str, Any]) -> Mapping[str, Any]:
         loop = asyncio.get_running_loop()
         before = await self.current_info()
@@ -802,7 +822,7 @@ class BitaxeDevice(MiningDevice):
                     or (saw_offline and old_uptime <= 1 and uptime <= old_uptime)
                 )
             matches = self._settings_match(info, expected)
-            if not matches:
+            if not self._boot_ready(info) or not matches:
                 restart_candidate = None
                 continue
             if restart_candidate is None:
@@ -887,7 +907,7 @@ class BitaxeDevice(MiningDevice):
             await self._wait_after_upgrade(old_uptime)
         elif method == "usb":
             if self.serial is None:
-                raise UpgradeError("USB upgrade requires an interfaces.serial table")
+                raise UpgradeError("USB upgrade requires an enabled interfaces.serial table")
             await self.serial.flash(artifacts, output_path=self.artifacts.path / "flash.log")
             await self._wait_after_upgrade(self.state.latest.uptime_seconds)
         else:
@@ -919,7 +939,7 @@ class BitaxeDevice(MiningDevice):
                 saw_offline = True
                 continue
             uptime = int(info.get("uptimeSeconds") or 0)
-            if saw_offline or old_uptime is None or uptime < old_uptime:
+            if (saw_offline or old_uptime is None or uptime < old_uptime) and self._boot_ready(info):
                 return info
         raise UpgradeError(f"{self.name} did not return after firmware upgrade")
 

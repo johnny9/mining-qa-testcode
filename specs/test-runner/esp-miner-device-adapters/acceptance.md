@@ -27,7 +27,15 @@
 - [ ] **TR-BITAXE-AC-08:** Current authorized HIL confirms identity, serial,
   telemetry, mutable restore, and healthy mining for each changed model.
 
+- [x] **TR-BITAXE-AC-09:** Omitted or explicitly disabled serial permits a
+  network-only lifecycle without serial construction or USB capabilities;
+  legacy serial tables remain enabled and USB upgrades fail while disabled.
+
 ## Verification evidence
+
+- `tests.unit.test_network_only` — disabled/omitted serial lifecycle, capability
+  exclusion, USB upgrade rejection, legacy compatibility, and invalid option;
+  reconciled 2026-09-13.
 
 - `tests.unit.test_bitaxe_state` — identity, inheritance, WebSocket diffs, and
   normalized state; reconciled 2026-08-10.

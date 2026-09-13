@@ -73,6 +73,13 @@
 
 ## Failure and recovery
 
+The API can return while Bonanza reports `asicHealth.lifecycle=STARTING` and
+`miningPaused=true`. Reboot verification waits for that transient startup to
+finish within the existing deadline, before capturing/restoring pause state.
+A reported overheat or ASIC safety fault fails verification; it never triggers
+a cleanup resume. Devices without the Bonanza lifecycle field retain their
+existing online/settings verification.
+
 - Uncertain upload response → do not retry; poll identity/version to determine
   actual state or fail.
 - Device does not return → setup error; operator uses documented recovery

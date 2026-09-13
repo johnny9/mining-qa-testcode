@@ -17,6 +17,10 @@
   idempotent.
 - Stable serial identifiers are provided by the host's udev environment.
 
+Network-only runs cannot collect early boot serial output or recover through
+USB. An API failure remains a test/setup error; firmware recovery must use a
+verified network-accessible partition or be reported as unavailable.
+
 ## Open questions
 
 - Future protocols may require explicit idempotency keys before safe write
